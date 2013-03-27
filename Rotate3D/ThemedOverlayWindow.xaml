@@ -1,0 +1,8 @@
+﻿<Window x:Class="Rotate3D.ThemedOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Loaded="WindowLoaded"
+        WindowStyle="None" Icon="Kinect.ico" Background="#FF511C74" Opacity="0" AllowsTransparency="True" ResizeMode="NoResize" ShowInTaskbar="False">
+    <!-- User controls added to grid in constructor -->
+    <Grid Name="RootGrid" />
+</Window>
