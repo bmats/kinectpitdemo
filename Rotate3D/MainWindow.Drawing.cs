@@ -18,7 +18,7 @@ using Microsoft.Kinect.Toolkit.Interaction;
 namespace Rotate3D {
     public partial class MainWindow {
         private const double ImageScaleFactor = 400.0/640.0;
-        private const double MaxHandCircleRadius = 30, MinHandCircleRadius = 5;
+        private const double MaxHandCircleRadius = 45, MinHandCircleRadius = 10;
 
         // Drawing constructs
         private DrawingGroup drawingGroup;
