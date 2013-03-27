@@ -91,6 +91,8 @@ namespace Rotate3D {
                 // Find the first skeleton which is tracked, the primary skeleton, as selected by the SDK
                 Skeleton bestSkel = null;
                 foreach (Skeleton skel in this.foundSkeletons) {
+                    if (skel == null) continue;
+
                     if (skel.TrackingState == SkeletonTrackingState.Tracked) {
                         bestSkel = skel;
                         break;

@@ -27,6 +27,7 @@ namespace Rotate3D {
         private InteractionStream interactStream;
 
         private Thread skeletonProcessingThread;
+        private AutoResetEvent skeletonProcessingBlocker;
 
         // Gesture-triggered overlays
         private ThemedOverlayWindow helpTipWindow, helpWindow;
@@ -100,8 +101,13 @@ namespace Rotate3D {
             this.helpWindow.Topmost = true;
 
             // Process skeletons in the background
+            this.skeletonProcessingBlocker = new AutoResetEvent(false);
             this.skeletonProcessingThread = new Thread(new ThreadStart(delegate() {
-                while (true) this.ProcessSkeletons();
+                while (true) {
+                    this.skeletonProcessingBlocker.WaitOne();
+                    this.ProcessSkeletons();
+                    this.skeletonProcessingBlocker.Reset();
+                }
             }));
             this.skeletonProcessingThread.Start();
         }
@@ -190,6 +196,7 @@ namespace Rotate3D {
                 // Save skeleton data
                 this.foundSkeletons = new Skeleton[skelFrame.SkeletonArrayLength];
                 skelFrame.CopySkeletonDataTo(this.foundSkeletons);
+                this.skeletonProcessingBlocker.Set(); // new data available, proceed
 
                 // Pass to interaction stream
                 if (this.interactStream != null)
