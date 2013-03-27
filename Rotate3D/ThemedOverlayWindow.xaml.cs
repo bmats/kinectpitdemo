@@ -36,6 +36,7 @@ namespace Rotate3D {
     public partial class ThemedOverlayWindow : Window {
         private bool doFadeIn;
         private Storyboard activeStoryboard;
+        private DispatcherTimer activeTimer;
 
         /// <summary>
         /// Creates a ThemedOverlayWindow with the specified contents and properties and fades it in.
@@ -94,6 +95,7 @@ namespace Rotate3D {
         /// </summary>
         public void FadeIn() {
             if (this.activeStoryboard != null) this.activeStoryboard.Stop();
+            if (this.activeTimer      != null) this.activeTimer.Stop();
 
             this.Show();
 
@@ -127,6 +129,7 @@ namespace Rotate3D {
         /// <param name="hide">Whether to Hide() the window on completion.</param>
         public void FadeOut(bool close, bool hide) {
             if (this.activeStoryboard != null) this.activeStoryboard.Stop();
+            if (this.activeTimer      != null) this.activeTimer.Stop();
 
             // Create an animation to fade to opacity 0
             DoubleAnimation animation = new DoubleAnimation();
@@ -160,6 +163,7 @@ namespace Rotate3D {
             timer.Interval = new TimeSpan((long)(seconds * 1.0e7));
             timer.Tick += delegate(object sender, EventArgs e) {
                 if (this.activeStoryboard != null) this.activeStoryboard.Stop();
+                if (this.activeTimer      != null) this.activeTimer.Stop();
 
                 DoubleAnimation animation = new DoubleAnimation();
                 animation.From = 1.0;
@@ -180,6 +184,7 @@ namespace Rotate3D {
                 this.activeStoryboard = storyboard;
             };
             timer.Start();
+            this.activeTimer = timer;
         }
     }
 }
