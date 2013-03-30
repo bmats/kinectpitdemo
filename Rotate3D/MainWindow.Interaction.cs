@@ -93,7 +93,9 @@ namespace Rotate3D {
                 foreach (Skeleton skel in this.foundSkeletons) {
                     if (skel == null) continue;
 
-                    if (skel.TrackingState == SkeletonTrackingState.Tracked) {
+                    // Tracked within focus area
+                    if (skel.TrackingState == SkeletonTrackingState.Tracked &&
+                        skel.Position.Z < 2 && Math.Abs(skel.Position.X) < 0.35) {
                         bestSkel = skel;
                         break;
                     }
@@ -189,7 +191,6 @@ namespace Rotate3D {
 
                     // Move the mouse accordingly
                     this.AdjustViewAngle(pixelX, pixelY);
-                    this.AdjustViewZoom(pixelZ);
                 }
             }
         }
@@ -216,12 +217,16 @@ namespace Rotate3D {
                                     for (int i = 0; i < this.positionHistory.Length; i++)
                                         this.positionHistory[i] = this.prevPosition;
                                     this.positionHistoryIdx = 0;
+
+                                    MouseGrip();
                                 }
                                 break;
                             case InteractionHandEventType.GripRelease:
                                 // Only release the active grip
-                                if (hp.HandType == this.activeGrippingHand)
+                                if (hp.HandType == this.activeGrippingHand) {
                                     this.activeGrippingHand = InteractionHandType.None;
+                                    MouseReleaseGrip();
+                                }
                                 break;
                         }
                     }
@@ -239,31 +244,66 @@ namespace Rotate3D {
                 type  = INPUT_MOUSE,
                 input = new MOUSEKEYBDINPUT {
                     mi = new MOUSEINPUT {
-                        dx          = 0,
-                        dy          = 0,
+                        dx          = pixelX,
+                        dy          = pixelY,
                         mouseData   = 0,
-                        dwFlags     = MOUSEEVENTF_MIDDLEDOWN,
+                        dwFlags     = MOUSEEVENTF_MOVE,
                         time        = 0,
                         dwExtraInfo = IntPtr.Zero
                     }
                 }
             };
 
-            // Middle mouse button down
+            // Move mouse relatively (rotation)
+            SendInput(1, ref input, Marshal.SizeOf(input));
+            Thread.Sleep(3);
+        }
+
+        private void MouseGrip() {
+            // Call the WinApi SendInput() function with this data structure
+            var input = new INPUT {
+                type = INPUT_MOUSE,
+                input = new MOUSEKEYBDINPUT {
+                    mi = new MOUSEINPUT {
+                        dx = 32767,
+                        dy = 32767,
+                        mouseData = 0,
+                        dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE,
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+
+            // Move back to center of screen (65535 / 2)
             SendInput(1, ref input, Marshal.SizeOf(input));
             Thread.Sleep(3);
 
-            // Move mouse relatively (rotation)
-            input.input.mi.dx      = pixelX;
-            input.input.mi.dy      = pixelY;
-            input.input.mi.dwFlags = MOUSEEVENTF_MOVE;
+            // Middle mouse button down
+            input.input.mi.dx = 0;
+            input.input.mi.dy = 0;
+            input.input.mi.dwFlags = MOUSEEVENTF_MIDDLEDOWN;
             SendInput(1, ref input, Marshal.SizeOf(input));
             Thread.Sleep(3);
+        }
+
+        private void MouseReleaseGrip() {
+            // Call the WinApi SendInput() function with this data structure
+            var input = new INPUT {
+                type = INPUT_MOUSE,
+                input = new MOUSEKEYBDINPUT {
+                    mi = new MOUSEINPUT {
+                        dx = 0,
+                        dy = 0,
+                        mouseData = 0,
+                        dwFlags = MOUSEEVENTF_MIDDLEUP,
+                        time = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
 
             // Middle mouse button up
-            input.input.mi.dx      = 0;
-            input.input.mi.dy      = 0;
-            input.input.mi.dwFlags = MOUSEEVENTF_MIDDLEUP;
             SendInput(1, ref input, Marshal.SizeOf(input));
             Thread.Sleep(3);
 
