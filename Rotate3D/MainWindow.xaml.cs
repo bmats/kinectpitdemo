@@ -93,7 +93,7 @@ namespace Rotate3D {
             this.interactStream.InteractionFrameReady += this.InteractionFrameReady;
 
             // Create the help tip window
-            this.helpTipWindow = new ThemedOverlayWindow(new KinectHelpTipControl(), new Size(354, 204), OverlayPosition.TopRight, double.PositiveInfinity, false);
+            this.helpTipWindow = new ThemedOverlayWindow(new KinectHelpTipControl(), new Size(354, 204), OverlayPosition.TopCenter, double.PositiveInfinity, false);
             this.helpTipWindow.Topmost = true;
 
             // Create the help window

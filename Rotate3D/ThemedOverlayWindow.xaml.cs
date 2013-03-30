@@ -25,9 +25,9 @@ namespace Rotate3D {
         Center,
         
         /// <summary>
-        /// In the top right corner of the primary screen, 20px from each side.
+        /// In the top center of the primary screen, 150px from the top.
         /// </summary>
-        TopRight
+        TopCenter
     }
 
     /// <summary>
@@ -70,9 +70,9 @@ namespace Rotate3D {
                     this.Left = SystemParameters.PrimaryScreenWidth  * 0.5 - this.Width  * 0.5;
                     this.Top  = SystemParameters.PrimaryScreenHeight * 0.5 - this.Height * 0.5;
                     break;
-                case OverlayPosition.TopRight:
-                    this.Left = SystemParameters.PrimaryScreenWidth - this.Width - 20;
-                    this.Top  = 20;
+                case OverlayPosition.TopCenter:
+                    this.Left = SystemParameters.PrimaryScreenWidth * 0.5 - this.Width * 0.5;
+                    this.Top  = 150;
                     break;
             }
 
