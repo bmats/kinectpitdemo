@@ -27,8 +27,8 @@ namespace Rotate3D {
             //  right shoulder above right hand
             return
                 Math.Abs((shoulderLeft.X - handLeft.X) - (shoulderLeft.Y - handLeft.Y)) < 0.2 &&
-                Math.Abs(shoulderLeft.Z  - handLeft.Z)  < 0.1 &&
-                Math.Abs(shoulderRight.X - handRight.X) < 0.1 && Math.Abs(shoulderRight.Z - handRight.Z) < 0.1;
+                Math.Abs(shoulderLeft.Z  - handLeft.Z)  < 0.25 &&
+                Math.Abs(shoulderRight.X - handRight.X) < 0.1 && Math.Abs(shoulderRight.Z - handRight.Z) < 0.25;
         }
     }
 }
