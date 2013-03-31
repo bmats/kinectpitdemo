@@ -276,7 +276,7 @@ namespace Rotate3D {
         }
 
         // Blender: VK_CONTROL, SolidWorks: VK_SHIFT
-        private const int ZoomKey = VK_SHIFT;
+        private const int ZoomKey = VK_CONTROL;
         private void AdjustViewZoom(int zoomPixel) {
             // Call the WinApi SendInput() function with these data structures
             var mouseInput = new INPUT {
