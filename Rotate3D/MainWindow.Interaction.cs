@@ -13,6 +13,9 @@ namespace Rotate3D {
     public partial class MainWindow {
         private const int MaxRotatePixels = 600, MaxZoomPixels = 600;
 
+        // Blender: VK_CONTROL, SolidWorks: VK_SHIFT
+        private const int ZoomKey = VK_SHIFT;
+
         // Player data
         private Skeleton[] foundSkeletons;
         private Skeleton activeSkeleton;
@@ -20,6 +23,7 @@ namespace Rotate3D {
 
         // View states
         private int viewRotationX, viewRotationY, zoom;
+        private ViewMode viewingMode = ViewMode.Rotate;
 
         // Position caching for jitter reduction
         private SkelHandPosition prevPosition = new SkelHandPosition();
@@ -157,7 +161,7 @@ namespace Rotate3D {
                            newY = GetArmVerticalPosition  (this.activeGrippingHand, this.activeSkeleton),
                            newZ = GetArmZoomAmount        (this.activeGrippingHand, this.activeSkeleton);
 
-                    // Update the history with the curent position
+                    // Update the history with the current position
                     this.positionHistory[this.positionHistoryIdx].X = newX;
                     this.positionHistory[this.positionHistoryIdx].Y = newY;
                     this.positionHistory[this.positionHistoryIdx].Z = newZ;
@@ -189,8 +193,32 @@ namespace Rotate3D {
                     this.positionHistoryIdx++;
                     if (this.positionHistoryIdx >= this.positionHistory.Length) this.positionHistoryIdx = 0;
 
+                    switch (this.viewingMode) {
+                        case ViewMode.Rotate:
+                            if (Math.Abs(zDiff) > 0.15 && Math.Abs(xDiff) < 0.15 && Math.Abs(yDiff) < 0.15) {
+                                this.viewingMode = ViewMode.Zoom;
+                                this.ZoomKeyDown();
+                            }
+                            break;
+                        case ViewMode.Zoom:
+                            if ((Math.Abs(xDiff) > 0.15 || Math.Abs(yDiff) > 0.15) && Math.Abs(zDiff) < 0.15) {
+                                this.viewingMode = ViewMode.Rotate;
+                                this.ZoomKeyUp();
+                                this.MouseUngrip();
+                                this.MouseGrip();
+                            }
+                            break;
+                    }
+
                     // Move the mouse accordingly
-                    this.AdjustViewAngle(pixelX, pixelY);
+                    switch (this.viewingMode) {
+                        case ViewMode.Rotate:
+                            this.AdjustViewAngle(pixelX, pixelY);
+                            break;
+                        case ViewMode.Zoom:
+                            this.AdjustViewZoom(pixelZ);
+                            break;
+                    }
                 }
             }
         }
@@ -225,7 +253,7 @@ namespace Rotate3D {
                                 // Only release the active grip
                                 if (hp.HandType == this.activeGrippingHand) {
                                     this.activeGrippingHand = InteractionHandType.None;
-                                    MouseReleaseGrip();
+                                    MouseUngrip();
                                 }
                                 break;
                         }
@@ -234,6 +262,8 @@ namespace Rotate3D {
                 }
             }
         }
+
+        #region Mouse Movement
 
         private void AdjustViewAngle(int pixelX, int pixelY) {
             // Invert Y for control
@@ -260,7 +290,6 @@ namespace Rotate3D {
         }
 
         private void MouseGrip() {
-            // Call the WinApi SendInput() function with this data structure
             var input = new INPUT {
                 type = INPUT_MOUSE,
                 input = new MOUSEKEYBDINPUT {
@@ -287,8 +316,7 @@ namespace Rotate3D {
             Thread.Sleep(3);
         }
 
-        private void MouseReleaseGrip() {
-            // Call the WinApi SendInput() function with this data structure
+        private void MouseUngrip() {
             var input = new INPUT {
                 type = INPUT_MOUSE,
                 input = new MOUSEKEYBDINPUT {
@@ -315,24 +343,28 @@ namespace Rotate3D {
             Thread.Sleep(3);
         }
 
-        // Blender: VK_CONTROL, SolidWorks: VK_SHIFT
-        private const int ZoomKey = VK_SHIFT;
         private void AdjustViewZoom(int zoomPixel) {
-            // Call the WinApi SendInput() function with these data structures
             var mouseInput = new INPUT {
                 type  = INPUT_MOUSE,
                 input = new MOUSEKEYBDINPUT {
                     mi = new MOUSEINPUT {
                         dx          = 0,
-                        dy          = 0,
+                        dy          = zoomPixel,
                         mouseData   = 0,
-                        dwFlags     = MOUSEEVENTF_MIDDLEDOWN,
+                        dwFlags     = MOUSEEVENTF_MOVE,
                         time        = 0,
                         dwExtraInfo = IntPtr.Zero
                     }
                 }
             };
-            var keyInput = new INPUT {
+
+            // Move mouse relatively (rotation)
+            SendInput(1, ref mouseInput, Marshal.SizeOf(mouseInput));
+            Thread.Sleep(3);
+        }
+
+        private void ZoomKeyDown() {
+            var input = new INPUT {
                 type  = INPUT_KEYBOARD,
                 input = new MOUSEKEYBDINPUT {
                     ki = new KEYBDINPUT {
@@ -346,37 +378,30 @@ namespace Rotate3D {
             };
 
             // Zoom key down
-            SendInput(1, ref keyInput, Marshal.SizeOf(keyInput));
-            Thread.Sleep(3);
-
-            // Middle mouse button down
-            SendInput(1, ref mouseInput, Marshal.SizeOf(mouseInput));
-            Thread.Sleep(3);
-
-            // Move mouse relatively (rotation)
-            mouseInput.input.mi.dy      = zoomPixel;
-            mouseInput.input.mi.dwFlags = MOUSEEVENTF_MOVE;
-            SendInput(1, ref mouseInput, Marshal.SizeOf(mouseInput));
-            Thread.Sleep(3);
-
-            // Middle mouse button up
-            mouseInput.input.mi.dy      = 0;
-            mouseInput.input.mi.dwFlags = MOUSEEVENTF_MIDDLEUP;
-            SendInput(1, ref mouseInput, Marshal.SizeOf(mouseInput));
-            Thread.Sleep(3);
-
-            // Zoom key up
-            keyInput.input.ki.dwFlags = KEYEVENTF_KEYUP;
-            SendInput(1, ref keyInput, Marshal.SizeOf(keyInput));
-            Thread.Sleep(3);
-
-            // Move back to center of screen (65535 / 2)
-            mouseInput.input.mi.dx = 32767;
-            mouseInput.input.mi.dy = 32767;
-            mouseInput.input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
-            SendInput(1, ref mouseInput, Marshal.SizeOf(mouseInput));
+            SendInput(1, ref input, Marshal.SizeOf(input));
             Thread.Sleep(3);
         }
+
+        private void ZoomKeyUp() {
+            var input = new INPUT {
+                type  = INPUT_KEYBOARD,
+                input = new MOUSEKEYBDINPUT {
+                    ki = new KEYBDINPUT {
+                        wVk         = ZoomKey,
+                        wScan       = 0,
+                        dwFlags     = KEYEVENTF_KEYUP,
+                        time        = 0,
+                        dwExtraInfo = IntPtr.Zero
+                    }
+                }
+            };
+
+            // Zoom key up
+            SendInput(1, ref input, Marshal.SizeOf(input));
+            Thread.Sleep(3);
+        }
+
+        #endregion
 
         #region Hand Position/Angle Calculation
 
@@ -487,5 +512,9 @@ namespace Rotate3D {
 
     struct SkelHandPosition {
         public double X, Y, Z;
+    }
+
+    enum ViewMode {
+        Rotate, Zoom
     }
 }
