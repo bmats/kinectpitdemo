@@ -4,14 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Kinect;
 using Microsoft.Kinect.Toolkit.Interaction;
 
 namespace Rotate3D {
     public partial class MainWindow {
-        private const int MaxRotatePixels = 600, MaxZoomPixels = 600;
+        private const double RotationConversion = 3, ZoomConversion = 2;
+
+        // Connection
+        private SolidWorks sw = new SolidWorks();
 
         // Player data
         private Skeleton[] foundSkeletons;
@@ -19,7 +21,7 @@ namespace Rotate3D {
         private InteractionHandType activeGrippingHand;
 
         // View states
-        private int viewRotationX, viewRotationY, zoom;
+        private double viewRotationX, viewRotationY, zoom;
 
         // Position caching for jitter reduction
         private SkelHandPosition prevPosition = new SkelHandPosition();
@@ -30,59 +32,6 @@ namespace Rotate3D {
 
         // Cached actions
         private Action helpTipWindowDisplayAction, helpWindowShowAction, helpWindowHideAction;
-
-        #region User32.dll Input and Constants
-
-        // http://msdn.microsoft.com/en-us/library/windows/desktop/ms646310(v=vs.85).aspx
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int SendInput(int nInputs, ref INPUT pInputs, int cbSize);
-
-        // http://msdn.microsoft.com/en-us/library/windows/desktop/ms646270(v=vs.85).aspx
-        private struct INPUT {
-            public uint type;
-            public MOUSEKEYBDINPUT input;
-        };
-
-        // Serves as a union for the mi and ki events in INPUT
-        [StructLayout(LayoutKind.Explicit)]
-        private struct MOUSEKEYBDINPUT {
-            [FieldOffset(0)]
-            public MOUSEINPUT mi;
-            [FieldOffset(0)]
-            public KEYBDINPUT ki;
-        }
-
-        // http://msdn.microsoft.com/en-us/library/windows/desktop/ms646273(v=vs.85).aspx
-        private struct MOUSEINPUT {
-            public int dx;
-            public int dy;
-            public uint mouseData;
-            public uint dwFlags;
-            public uint time;
-            public IntPtr dwExtraInfo;
-        }
-
-        // http://msdn.microsoft.com/en-us/library/windows/desktop/ms646271(v=vs.85).aspx
-        private struct KEYBDINPUT {
-            public UInt16 wVk;
-            public UInt16 wScan;
-            public uint dwFlags;
-            public uint time;
-            public IntPtr dwExtraInfo;
-        }
-
-        private const int
-            MOUSEEVENTF_ABSOLUTE   = 0x8000,
-            MOUSEEVENTF_MOVE       = 0x0001,
-            MOUSEEVENTF_MIDDLEDOWN = 0x0020,
-            MOUSEEVENTF_MIDDLEUP   = 0x0040,
-            KEYEVENTF_KEYUP        = 0x0002,
-            VK_SHIFT               = 0x10,
-            VK_CONTROL             = 0x11,
-            INPUT_MOUSE            = 0,
-            INPUT_KEYBOARD         = 1;
-
-        #endregion
 
         private void ProcessSkeletons() {
             {
@@ -172,14 +121,14 @@ namespace Rotate3D {
                            zDiff = avgZDiff - this.prevPosition.Z;
 
                     // Convert the position to actual pixels
-                    int pixelX = (int)(xDiff * MaxRotatePixels),
-                        pixelY = (int)(yDiff * MaxRotatePixels),
-                        pixelZ = (int)(zDiff * MaxZoomPixels);
+                    double angleX = xDiff * RotationConversion,
+                           angleY = yDiff * RotationConversion,
+                          factorZ = zDiff * ZoomConversion;
 
                     // Update the current position and previous position
-                    this.viewRotationX += pixelX;
-                    this.viewRotationY += pixelY;
-                    this.zoom          += pixelZ;
+                    this.viewRotationX += angleX;
+                    this.viewRotationY += angleY;
+                    this.zoom          += factorZ;
 
                     this.prevPosition.X += xDiff;
                     this.prevPosition.Y += yDiff;
@@ -189,8 +138,9 @@ namespace Rotate3D {
                     this.positionHistoryIdx++;
                     if (this.positionHistoryIdx >= this.positionHistory.Length) this.positionHistoryIdx = 0;
 
-                    // Move the mouse accordingly
-                    this.AdjustViewAngle(pixelX, pixelY);
+                    // Move the model accordingly
+                    this.sw.AdjustViewAngle(angleX, angleY);
+                    this.sw.AdjustZoom(factorZ);
                 }
             }
         }
@@ -218,14 +168,14 @@ namespace Rotate3D {
                                         this.positionHistory[i] = this.prevPosition;
                                     this.positionHistoryIdx = 0;
 
-                                    MouseGrip();
+                                    this.sw.PreRender();
                                 }
                                 break;
                             case InteractionHandEventType.GripRelease:
                                 // Only release the active grip
                                 if (hp.HandType == this.activeGrippingHand) {
                                     this.activeGrippingHand = InteractionHandType.None;
-                                    MouseReleaseGrip();
+                                    this.sw.PostRender();
                                 }
                                 break;
                         }
@@ -233,149 +183,6 @@ namespace Rotate3D {
                     break;
                 }
             }
-        }
-
-        private void AdjustViewAngle(int pixelX, int pixelY) {
-            // Invert Y for control
-            pixelY *= -1;
-
-            // Call the WinApi SendInput() function with this data structure
-            var input = new INPUT {
-                type  = INPUT_MOUSE,
-                input = new MOUSEKEYBDINPUT {
-                    mi = new MOUSEINPUT {
-                        dx          = pixelX,
-                        dy          = pixelY,
-                        mouseData   = 0,
-                        dwFlags     = MOUSEEVENTF_MOVE,
-                        time        = 0,
-                        dwExtraInfo = IntPtr.Zero
-                    }
-                }
-            };
-
-            // Move mouse relatively (rotation)
-            SendInput(1, ref input, Marshal.SizeOf(input));
-            Thread.Sleep(3);
-        }
-
-        private void MouseGrip() {
-            // Call the WinApi SendInput() function with this data structure
-            var input = new INPUT {
-                type = INPUT_MOUSE,
-                input = new MOUSEKEYBDINPUT {
-                    mi = new MOUSEINPUT {
-                        dx = 32767,
-                        dy = 32767,
-                        mouseData = 0,
-                        dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE,
-                        time = 0,
-                        dwExtraInfo = IntPtr.Zero
-                    }
-                }
-            };
-
-            // Move back to center of screen (65535 / 2)
-            SendInput(1, ref input, Marshal.SizeOf(input));
-            Thread.Sleep(3);
-
-            // Middle mouse button down
-            input.input.mi.dx = 0;
-            input.input.mi.dy = 0;
-            input.input.mi.dwFlags = MOUSEEVENTF_MIDDLEDOWN;
-            SendInput(1, ref input, Marshal.SizeOf(input));
-            Thread.Sleep(3);
-        }
-
-        private void MouseReleaseGrip() {
-            // Call the WinApi SendInput() function with this data structure
-            var input = new INPUT {
-                type = INPUT_MOUSE,
-                input = new MOUSEKEYBDINPUT {
-                    mi = new MOUSEINPUT {
-                        dx = 0,
-                        dy = 0,
-                        mouseData = 0,
-                        dwFlags = MOUSEEVENTF_MIDDLEUP,
-                        time = 0,
-                        dwExtraInfo = IntPtr.Zero
-                    }
-                }
-            };
-
-            // Middle mouse button up
-            SendInput(1, ref input, Marshal.SizeOf(input));
-            Thread.Sleep(3);
-
-            // Move back to center of screen (65535 / 2)
-            input.input.mi.dx      = 32767;
-            input.input.mi.dy      = 32767;
-            input.input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
-            SendInput(1, ref input, Marshal.SizeOf(input));
-            Thread.Sleep(3);
-        }
-
-        // Blender: VK_CONTROL, SolidWorks: VK_SHIFT
-        private const int ZoomKey = VK_SHIFT;
-        private void AdjustViewZoom(int zoomPixel) {
-            // Call the WinApi SendInput() function with these data structures
-            var mouseInput = new INPUT {
-                type  = INPUT_MOUSE,
-                input = new MOUSEKEYBDINPUT {
-                    mi = new MOUSEINPUT {
-                        dx          = 0,
-                        dy          = 0,
-                        mouseData   = 0,
-                        dwFlags     = MOUSEEVENTF_MIDDLEDOWN,
-                        time        = 0,
-                        dwExtraInfo = IntPtr.Zero
-                    }
-                }
-            };
-            var keyInput = new INPUT {
-                type  = INPUT_KEYBOARD,
-                input = new MOUSEKEYBDINPUT {
-                    ki = new KEYBDINPUT {
-                        wVk         = ZoomKey,
-                        wScan       = 0,
-                        dwFlags     = 0,
-                        time        = 0,
-                        dwExtraInfo = IntPtr.Zero
-                    }
-                }
-            };
-
-            // Zoom key down
-            SendInput(1, ref keyInput, Marshal.SizeOf(keyInput));
-            Thread.Sleep(3);
-
-            // Middle mouse button down
-            SendInput(1, ref mouseInput, Marshal.SizeOf(mouseInput));
-            Thread.Sleep(3);
-
-            // Move mouse relatively (rotation)
-            mouseInput.input.mi.dy      = zoomPixel;
-            mouseInput.input.mi.dwFlags = MOUSEEVENTF_MOVE;
-            SendInput(1, ref mouseInput, Marshal.SizeOf(mouseInput));
-            Thread.Sleep(3);
-
-            // Middle mouse button up
-            mouseInput.input.mi.dy      = 0;
-            mouseInput.input.mi.dwFlags = MOUSEEVENTF_MIDDLEUP;
-            SendInput(1, ref mouseInput, Marshal.SizeOf(mouseInput));
-            Thread.Sleep(3);
-
-            // Zoom key up
-            keyInput.input.ki.dwFlags = KEYEVENTF_KEYUP;
-            SendInput(1, ref keyInput, Marshal.SizeOf(keyInput));
-            Thread.Sleep(3);
-
-            // Move back to center of screen (65535 / 2)
-            mouseInput.input.mi.dx = 32767;
-            mouseInput.input.mi.dy = 32767;
-            mouseInput.input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
-            SendInput(1, ref mouseInput, Marshal.SizeOf(mouseInput));
-            Thread.Sleep(3);
         }
 
         #region Hand Position/Angle Calculation
