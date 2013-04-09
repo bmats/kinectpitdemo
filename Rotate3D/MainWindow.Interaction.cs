@@ -10,7 +10,7 @@ using Microsoft.Kinect.Toolkit.Interaction;
 
 namespace Rotate3D {
     public partial class MainWindow {
-        private const double RotationConversion = 3, ZoomConversion = 2;
+        private const double RotationConversion = 3, ZoomConversion = 1.3;
 
         // Connection
         private SolidWorks sw = new SolidWorks();
