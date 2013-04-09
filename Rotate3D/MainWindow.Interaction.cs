@@ -10,7 +10,7 @@ using Microsoft.Kinect.Toolkit.Interaction;
 
 namespace Rotate3D {
     public partial class MainWindow {
-        private const double RotationConversion = 3, ZoomConversion = 1.3;
+        private const double RotationConversion = 3, ZoomConversion = 1.3, RollConversion = 0.1;
 
         // Connection
         private SolidWorks sw = new SolidWorks();
@@ -19,12 +19,13 @@ namespace Rotate3D {
         private Skeleton[] foundSkeletons;
         private Skeleton activeSkeleton;
         private InteractionHandType activeGrippingHand;
+        private bool doubleGripping = false;
 
         // View states
         private double viewRotationX, viewRotationY, zoom;
 
         // Position caching for jitter reduction
-        private SkelHandPosition prevPosition = new SkelHandPosition();
+        private SkelHandPosition prevPosition = new SkelHandPosition(), prevSecondPosition = new SkelHandPosition();
         private SkelHandPosition[] positionHistory = new SkelHandPosition[15];
         private int positionHistoryIdx = 0;
 
@@ -106,7 +107,7 @@ namespace Rotate3D {
                            newY = GetArmVerticalPosition  (this.activeGrippingHand, this.activeSkeleton),
                            newZ = GetArmZoomAmount        (this.activeGrippingHand, this.activeSkeleton);
 
-                    // Update the history with the curent position
+                    // Update the history with the current position
                     this.positionHistory[this.positionHistoryIdx].X = newX;
                     this.positionHistory[this.positionHistoryIdx].Y = newY;
                     this.positionHistory[this.positionHistoryIdx].Z = newZ;
@@ -138,9 +139,29 @@ namespace Rotate3D {
                     this.positionHistoryIdx++;
                     if (this.positionHistoryIdx >= this.positionHistory.Length) this.positionHistoryIdx = 0;
 
-                    // Move the model accordingly
-                    this.sw.AdjustViewAngle(angleX, angleY);
-                    this.sw.AdjustZoom(factorZ);
+                    if (!this.doubleGripping) {
+                        // Move the model accordingly
+                        this.sw.AdjustViewAngle(angleX, angleY);
+                        this.sw.AdjustZoom(factorZ);
+                    }
+                    else {
+                        InteractionHandType secondaryType = this.activeGrippingHand == InteractionHandType.Left ? InteractionHandType.Right : InteractionHandType.Left;
+                        double secondaryX = GetArmHorizontalPosition(secondaryType, this.activeSkeleton),
+                               secondaryY = GetArmVerticalPosition  (secondaryType, this.activeSkeleton);
+
+                        // Get the rotation angle difference
+                        double primaryRotDiff = Math.Atan(newY / newX) - Math.Atan(this.prevPosition.Y / this.prevPosition.X),
+                             secondaryRotDiff = Math.Atan(secondaryY / secondaryX) - Math.Atan(this.prevSecondPosition.Y / this.prevSecondPosition.X);
+
+                        double secondXDiff = secondaryX - this.prevSecondPosition.X,
+                               secondYDiff = secondaryY - this.prevSecondPosition.Y;
+
+                        this.prevSecondPosition.X += secondXDiff;
+                        this.prevSecondPosition.Y += secondYDiff;
+
+                        // Average the two angles
+                        this.sw.AdjustRoll((primaryRotDiff + secondaryRotDiff) * 0.5 * RollConversion);
+                    }
                 }
             }
         }
@@ -170,12 +191,32 @@ namespace Rotate3D {
 
                                     this.sw.PreRender();
                                 }
+                                else {
+                                    // If already gripping, allow double hand gripping
+                                    this.doubleGripping = true;
+
+                                    // Save current position
+                                    this.prevSecondPosition.X = GetArmHorizontalPosition(hp.HandType, this.activeSkeleton);
+                                    this.prevSecondPosition.Y = GetArmVerticalPosition  (hp.HandType, this.activeSkeleton);
+                                    this.prevSecondPosition.Z = GetArmZoomAmount        (hp.HandType, this.activeSkeleton);
+                                }
                                 break;
                             case InteractionHandEventType.GripRelease:
-                                // Only release the active grip
                                 if (hp.HandType == this.activeGrippingHand) {
+                                    // Only release the active grip
                                     this.activeGrippingHand = InteractionHandType.None;
-                                    this.sw.PostRender();
+
+                                    // Switch gripping if other hand is still gripping
+                                    if (this.doubleGripping) {
+                                        this.activeGrippingHand = this.activeGrippingHand == InteractionHandType.Left ? InteractionHandType.Right : InteractionHandType.Left;
+                                        this.doubleGripping = false;
+                                    }
+                                    else {
+                                        this.sw.PostRender();
+                                    }
+                                }
+                                else if (hp.HandType != InteractionHandType.None) {
+                                    this.doubleGripping = false;
                                 }
                                 break;
                         }

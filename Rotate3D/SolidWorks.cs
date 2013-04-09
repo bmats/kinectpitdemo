@@ -82,5 +82,13 @@ namespace Rotate3D {
 
             this.view.ZoomByFactor(zDist);
         }
+
+        /// <summary>
+        /// Adjust the rotation of the model in the camera's plane (i.e. rotate the model on screen).
+        /// </summary>
+        /// <param name="angle">The relative rotation, in radians.</param>
+        public void AdjustRoll(double angle) {
+            this.view.RollBy(angle);
+        }
     }
 }

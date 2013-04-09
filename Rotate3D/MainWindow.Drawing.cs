@@ -36,7 +36,7 @@ namespace Rotate3D {
         private double handCircleRadius = 0;
 
         // Colors for drawing
-        private Pen activeHandPen = new Pen(Brushes.White, 4);
+        private Pen activeHandPen = new Pen(Brushes.White, 4), yoyoPen = new Pen(new SolidColorBrush(Color.FromArgb(255, 255, 255, 255)), 4);
         private Brush shadowBrush = new SolidColorBrush(Color.FromArgb(150, 0, 0, 0));
 
         private void UpdateImage() {
@@ -60,14 +60,24 @@ namespace Rotate3D {
                         Color c = Color.FromArgb((byte)(255 - (this.handCircleRadius / MaxHandCircleRadius) * 255), 255, 255, 255);
                         this.activeHandPen.Brush = new SolidColorBrush(c);
 
+                        Point leftPoint = this.SkeletonPointToScreen(this.activeSkeleton.Joints[JointType.HandLeft].Position),
+                             rightPoint = this.SkeletonPointToScreen(this.activeSkeleton.Joints[JointType.HandRight].Position);
+
                         // Draw the circle around the hand
-                        dc.DrawEllipse(null, activeHandPen, this.SkeletonPointToScreen(this.activeSkeleton.Joints[
-                            this.activeGrippingHand == InteractionHandType.Left ? JointType.HandLeft : JointType.HandRight].Position),
-                            handCircleRadius, handCircleRadius);
+                        dc.DrawEllipse(null, activeHandPen, this.activeGrippingHand == InteractionHandType.Left ? leftPoint : rightPoint, handCircleRadius, handCircleRadius);
 
                         // Loop the radius animation
                         this.handCircleRadius += 1.5;
                         if (this.handCircleRadius >= MaxHandCircleRadius) this.handCircleRadius = MinHandCircleRadius;
+
+                        if (this.doubleGripping) {
+                            // Draw second circle
+                            dc.DrawEllipse(null, activeHandPen, this.activeGrippingHand == InteractionHandType.Left ? rightPoint : leftPoint, handCircleRadius, handCircleRadius);
+
+                            // Draw circle containing both hands
+                            double handRad = Math.Sqrt((rightPoint.X - leftPoint.X) * (rightPoint.X - leftPoint.X) + (rightPoint.Y - leftPoint.Y) * (rightPoint.Y - leftPoint.Y)) * 0.5;
+                            dc.DrawEllipse(null, yoyoPen, new Point((leftPoint.X + rightPoint.X) * 0.5, (leftPoint.Y + rightPoint.Y) * 0.5), handRad, handRad);
+                        }
                     }
                 }
             }
