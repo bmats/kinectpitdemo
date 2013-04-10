@@ -52,6 +52,7 @@ namespace Rotate3D {
             if (this.sensor == null) {
                 new ThemedOverlayWindow(new ThemedTextControl("No active Kinects found!"), new Size(600, 100), OverlayPosition.Center, 3);
                 this.Close();
+                return;
             }
 
             // Initialize the Kinect streams
@@ -84,6 +85,20 @@ namespace Rotate3D {
             this.playerMaskImage = new WriteableBitmap(640, 480, 96, 96, PixelFormats.Bgra32, null);
 
             this.bitmapDrawingRect = new Rect(0, 0, this.Image.Width, this.Image.Height);
+
+            try {
+                this.sw = new SolidWorks();
+            }
+            catch (Exception ex) {
+                if (ex is SolidWorksException && ex.Message == "No open SolidWorks document found!")
+                    new ThemedOverlayWindow(new ThemedTextControl("No active SolidWorks document found!"), new Size(800, 100), OverlayPosition.Center, 3);
+                else
+                    MessageBox.Show("Error connecting to SolidWorks:\r\n" + ex.ToString(), "Kinect Rotate 3D", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                this.sensor.Stop();
+                this.Close();
+                return;
+            }
 
             // Start Kinecting
             this.sensor.Start();

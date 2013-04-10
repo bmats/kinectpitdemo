@@ -13,7 +13,7 @@ namespace Rotate3D {
         private const double RotationConversion = 3, ZoomConversion = 1.3, Inertia = 0.8;
 
         // Connection
-        private SolidWorks sw = new SolidWorks();
+        private SolidWorks sw;
 
         // Player data
         private Skeleton[] foundSkeletons;

@@ -21,19 +21,18 @@ namespace Rotate3D {
         /// <summary>
         /// Creates a new SolidWorks connector to the currently active document in SolidWorks.
         /// </summary>
+        /// <exception cref="Rotate3D.SolidWorksException">On an error communicating with SolidWorks.</exception>
         public SolidWorks() {
-            try {
-                this.modelDoc  = (ModelDoc2)app.ActiveDoc;
-                this.extension = this.modelDoc.Extension;
-                this.view      = (ModelView)this.modelDoc.ActiveView;
+            this.modelDoc  = (ModelDoc2)app.ActiveDoc;
 
-                // Set lower quality for quicker rendering
-                this.view.DisplayMode = (int)swViewDisplayMode_e.swViewDisplayMode_Shaded;
-            }
-            catch (Exception e) {
-                MessageBox.Show("Error connecting to SolidWorks:\r\n" + e, "Kinect Demo", MessageBoxButton.OK, MessageBoxImage.Error);
-                Application.Current.Shutdown(1);
-            }
+            if (this.modelDoc == null)
+                throw new SolidWorksException("No open SolidWorks document found!");
+
+            this.extension = this.modelDoc.Extension;
+            this.view      = (ModelView)this.modelDoc.ActiveView;
+
+            // Set lower quality for quicker rendering
+            this.view.DisplayMode = (int)swViewDisplayMode_e.swViewDisplayMode_Shaded;
         }
 
         /// <summary>
@@ -81,6 +80,25 @@ namespace Rotate3D {
             zDist += 1;
 
             this.view.ZoomByFactor(zDist);
+        }
+    }
+
+    /// <summary>
+    /// Thrown om errors communicating with SolidWorks.
+    /// </summary>
+    class SolidWorksException : Exception {
+        /// <summary>
+        /// Initializes a new instance of a SolidWorks exception.
+        /// </summary>
+        public SolidWorksException() : base() {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of a SolidWorks exception with the specified message.
+        /// </summary>
+        /// <param name="message">The message that describes the error.</param>
+        public SolidWorksException(string message)
+            : base(message) {
         }
     }
 }
