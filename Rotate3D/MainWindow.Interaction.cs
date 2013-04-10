@@ -10,7 +10,7 @@ using Microsoft.Kinect.Toolkit.Interaction;
 
 namespace Rotate3D {
     public partial class MainWindow {
-        private const double RotationConversion = 3, ZoomConversion = 1.3;
+        private const double RotationConversion = 3, ZoomConversion = 1.3, Inertia = 0.8;
 
         // Connection
         private SolidWorks sw = new SolidWorks();
@@ -20,8 +20,11 @@ namespace Rotate3D {
         private Skeleton activeSkeleton;
         private InteractionHandType activeGrippingHand;
 
+        private bool isCoasting = false;
+
         // View states
         private double viewRotationX, viewRotationY, zoom;
+        private double viewRotationXVel, viewRotationYVel, zoomVel;
 
         // Position caching for jitter reduction
         private SkelHandPosition prevPosition = new SkelHandPosition();
@@ -106,7 +109,7 @@ namespace Rotate3D {
                            newY = GetArmVerticalPosition  (this.activeGrippingHand, this.activeSkeleton),
                            newZ = GetArmZoomAmount        (this.activeGrippingHand, this.activeSkeleton);
 
-                    // Update the history with the curent position
+                    // Update the history with the current position
                     this.positionHistory[this.positionHistoryIdx].X = newX;
                     this.positionHistory[this.positionHistoryIdx].Y = newY;
                     this.positionHistory[this.positionHistoryIdx].Z = newZ;
@@ -130,6 +133,10 @@ namespace Rotate3D {
                     this.viewRotationY += angleY;
                     this.zoom          += factorZ;
 
+                    this.viewRotationXVel = xDiff;
+                    this.viewRotationYVel = yDiff;
+                    this.zoomVel          = zDiff;
+
                     this.prevPosition.X += xDiff;
                     this.prevPosition.Y += yDiff;
                     this.prevPosition.Z += zDiff;
@@ -141,7 +148,42 @@ namespace Rotate3D {
                     // Move the model accordingly
                     this.sw.AdjustViewAngle(angleX, angleY);
                     this.sw.AdjustZoom(factorZ);
+                    return;
                 }
+            }
+
+            if (this.isCoasting) {
+                this.viewRotationXVel *= Inertia;
+                this.viewRotationYVel *= Inertia;
+                this.zoomVel *= Inertia;
+
+                double xDiff = viewRotationXVel,
+                       yDiff = viewRotationYVel,
+                       zDiff = zoomVel;
+
+                // If stopped moving (passed min threshold), stop coasting
+                if (Math.Abs(this.viewRotationXVel) < 0.001 && Math.Abs(this.viewRotationYVel) < 0.001 && Math.Abs(this.zoomVel) < 0.001) {
+                    this.isCoasting = false;
+                    this.sw.PostRender();
+                }
+
+                // Convert the position to actual pixels
+                double angleX = xDiff * RotationConversion,
+                       angleY = yDiff * RotationConversion,
+                      factorZ = zDiff * ZoomConversion;
+
+                // Update the current position and previous position
+                this.viewRotationX += angleX;
+                this.viewRotationY += angleY;
+                this.zoom          += factorZ;
+
+                this.prevPosition.X += xDiff;
+                this.prevPosition.Y += yDiff;
+                this.prevPosition.Z += zDiff;
+
+                // Move the model accordingly
+                this.sw.AdjustViewAngle(angleX, angleY);
+                this.sw.AdjustZoom(factorZ);
             }
         }
 
@@ -168,6 +210,7 @@ namespace Rotate3D {
                                         this.positionHistory[i] = this.prevPosition;
                                     this.positionHistoryIdx = 0;
 
+                                    this.isCoasting = false;
                                     this.sw.PreRender();
                                 }
                                 break;
@@ -175,7 +218,7 @@ namespace Rotate3D {
                                 // Only release the active grip
                                 if (hp.HandType == this.activeGrippingHand) {
                                     this.activeGrippingHand = InteractionHandType.None;
-                                    this.sw.PostRender();
+                                    this.isCoasting = true;
                                 }
                                 break;
                         }
