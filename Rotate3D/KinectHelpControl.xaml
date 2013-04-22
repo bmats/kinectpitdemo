@@ -4,39 +4,51 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="600" Background="#FF511C74" BorderBrush="White" BorderThickness="2">
+             d:DesignHeight="650" d:DesignWidth="600" Background="#FF511C74" BorderBrush="White" BorderThickness="2">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="100" />
-            <RowDefinition Height="106" />
-            <RowDefinition Height="106" />
-            <RowDefinition Height="106" />
+            <RowDefinition Height="80" />
+            <RowDefinition Height="120" />
+            <RowDefinition Height="43" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="160" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="30" />
-            <ColumnDefinition Width="60" />
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="20" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="30" />
         </Grid.ColumnDefinitions>
-        
-        <Label Content="Help" Foreground="White" FontSize="36" Height="80" Grid.ColumnSpan="4" Margin="0,0,0,20" VerticalAlignment="Top" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="White" BorderThickness="0,0,0,2" />
+
+        <Label Content="Help" Foreground="White" FontSize="36" Height="80" Grid.ColumnSpan="4" VerticalAlignment="Top" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="White" BorderThickness="0,0,0,2" />
         <!-- Alternate White Header -->
         <!-- <Label Content="Help" Foreground="#FF511C74" Background="White" FontSize="36" Height="80" Grid.ColumnSpan="4" Margin="0,0,0,20" VerticalAlignment="Top" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" BorderBrush="White" BorderThickness="0,0,0,2" /> -->
 
-        <Label Content="1" Grid.Column="1" Grid.Row="1" FontSize="72" Foreground="White" Margin="0,0,10,0" HorizontalContentAlignment="Right" VerticalContentAlignment="Center" />
-        <Label Content="Stand back two arm-lengths from the Kinect sensor.&#xA;Look in the live camera feed in the bottom right.&#xA;Can the Kinect see your upper body?"
-               Grid.Column="2" Grid.Row="1" FontSize="18" Foreground="White" Margin="10,0,0,0" VerticalContentAlignment="Center" />
+        <TextBlock Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="2" FontSize="18" Foreground="White" VerticalAlignment="Center" TextAlignment="Center" Height="72" Margin="0,13,0,15" >
+            <!-- <Run Text="Stand back on the" />
+            <Run TextDecorations="Underline" Text="marked line" /> -->
+            <Run FontWeight="Bold" Text="Stand back on the marked line" />
+            <Run Text="in front of the Kinect.&#xA;Look in the live camera feed in the bottom right.&#xA;Can the Kinect see your upper body?" />
+        </TextBlock>
 
-        <Label Content="2" Grid.Column="1" Grid.Row="2" FontSize="72" Foreground="White" Margin="0,0,10,0" HorizontalContentAlignment="Right" VerticalContentAlignment="Center" />
-        <Label Content="Stick your arm out in front of you, toward the Kinect.&#xA;Make a fist and pretend you're gripping the CAD model."
-               Grid.Column="2" Grid.Row="2" FontSize="18" Foreground="White" Margin="10,0,0,0" VerticalContentAlignment="Center" />
+        <Label Content="Rotating"
+        	Grid.Column="1" Grid.Row="2" FontSize="24" Foreground="White" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+            Margin="0,0,5,0" BorderBrush="White" BorderThickness="0,0,0,1" />
+        <Image Source="Images/rotate.png" Stretch="None"
+            Grid.Column="1" Grid.Row="3" />
+        <Border BorderBrush="White" BorderThickness="0,0,0,1"
+                Grid.Column="1" Grid.Row="3" HorizontalAlignment="Left" VerticalAlignment="Bottom" Height="1" Width="263" />
 
-        <Label Content="3" Grid.Column="1" Grid.Row="3" FontSize="72" Foreground="White" Margin="0,0,10,0" HorizontalContentAlignment="Right" VerticalContentAlignment="Center" />
-        <Label Content="Move your hand up and down, left and right to rotate the&#xA;CAD model. Push your arm toward the Kinect to zoom in.&#xA;Release your grip when you're done."
-               Grid.Column="2" Grid.Row="3" FontSize="18" Foreground="White" Margin="10,0,0,0" VerticalContentAlignment="Center" />
-
+        <Label Content="Exploding"
+        	Grid.Column="2" Grid.Row="2" FontSize="24" Foreground="White" VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+            Margin="5,0,0,0" BorderBrush="White" BorderThickness="0,0,0,1" />
+        <Image Source="Images/explode.png" Stretch="None"
+            Grid.Column="2" Grid.Row="3" />
+        <Border BorderBrush="White" BorderThickness="0,0,0,1"
+                Grid.Column="2" Grid.Row="3" HorizontalAlignment="Right" VerticalAlignment="Bottom" Height="1" Width="263" />
+        
         <!-- Team 2485 Logo -->
-        <Image Source="Images/KinectSensor.png" Stretch="None" Grid.Row="5" Grid.ColumnSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        <Image Source="Images/KinectSensor.png" Stretch="None"
+               Grid.Column="1" Grid.Row="4" Grid.ColumnSpan="2" HorizontalAlignment="Center" VerticalAlignment="Center" />
     </Grid>
 </UserControl>

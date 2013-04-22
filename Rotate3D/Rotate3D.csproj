@@ -144,6 +144,8 @@
       <Link>KinectInteraction170_64.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Resource Include="Images\explode.png" />
+    <Resource Include="Images\rotate.png" />
     <Resource Include="Images\KinectSensor.png" />
     <Resource Include="Kinect.ico" />
   </ItemGroup>
