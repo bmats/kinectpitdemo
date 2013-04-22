@@ -62,6 +62,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Exploder.cs" />
     <Compile Include="KinectExtensions.cs" />
     <Compile Include="KinectHelpControl.xaml.cs">
       <DependentUpon>KinectHelpControl.xaml</DependentUpon>
@@ -161,6 +162,15 @@
     </COMReference>
     <COMReference Include="SwConst">
       <Guid>{4687F359-55D0-4CD3-B6CF-2EB42C11F989}</Guid>
+      <VersionMajor>20</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="SwMotionStudy">
+      <Guid>{45DB5211-F358-4B5E-A235-E792EB818BAA}</Guid>
       <VersionMajor>20</VersionMajor>
       <VersionMinor>0</VersionMinor>
       <Lcid>0</Lcid>

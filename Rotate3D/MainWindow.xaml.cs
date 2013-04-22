@@ -88,12 +88,24 @@ namespace Rotate3D {
 
             try {
                 this.sw = new SolidWorks();
+                SolidWorks.MoveToForeground();
+
+                // Non-fatal
+                if (!this.sw.ExplodeAnimationFound)
+                    new ThemedOverlayWindow(new ThemedTextControl("No explode animation found!"), new Size(600, 100), OverlayPosition.Center, 4);
+
+                this.exploder = new Exploder(sw);
             }
             catch (Exception ex) {
-                if (ex is SolidWorksException && ex.Message == "No open SolidWorks document found!")
-                    new ThemedOverlayWindow(new ThemedTextControl("No active SolidWorks document found!"), new Size(800, 100), OverlayPosition.Center, 3);
+                // Fatal
+                if (ex is SolidWorksException) {
+                    if (ex.Message == "No open SolidWorks document found!")
+                        new ThemedOverlayWindow(new ThemedTextControl("No active SolidWorks document found!"), new Size(800, 100), OverlayPosition.Center, 3);
+                    else
+                        MessageBox.Show("Error connecting to SolidWorks:\r\n" + ex.ToString(), "Kinect Rotate 3D", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
                 else
-                    MessageBox.Show("Error connecting to SolidWorks:\r\n" + ex.ToString(), "Kinect Rotate 3D", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("SolidWorks exception:\r\n" + ex.ToString(), "Kinect Rotate 3D", MessageBoxButton.OK, MessageBoxImage.Error);
 
                 this.sensor.Stop();
                 this.Close();

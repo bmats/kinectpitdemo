@@ -36,7 +36,9 @@ namespace Rotate3D {
         private double handCircleRadius = 0;
 
         // Colors for drawing
-        private Pen activeHandPen = new Pen(Brushes.White, 4);
+        private Pen activeHandPen = new Pen(Brushes.White, 4),
+            gripInitPen   = new Pen(new SolidColorBrush(Color.FromArgb(150, 255, 255, 255)), 3),
+            gripThreshPen = new Pen(new SolidColorBrush(Color.FromArgb( 50, 255, 255, 255)), 3);
         private Brush shadowBrush = new SolidColorBrush(Color.FromArgb(150, 0, 0, 0));
 
         private void UpdateImage() {
@@ -54,16 +56,38 @@ namespace Rotate3D {
                     // Draw the skeleton
                     this.DrawBonesAndJoints(this.activeSkeleton, dc);
 
-                    // Draw gripping hand circle
+                    // If gripping
                     if (this.activeGrippingHand != InteractionHandType.None) {
                         // Alter opacity with radius
                         Color c = Color.FromArgb((byte)(255 - (this.handCircleRadius / MaxHandCircleRadius) * 255), 255, 255, 255);
                         this.activeHandPen.Brush = new SolidColorBrush(c);
 
-                        // Draw the circle around the hand
+                        // Draw the gripping hand circle around the primary hand
                         dc.DrawEllipse(null, activeHandPen, this.SkeletonPointToScreen(this.activeSkeleton.Joints[
                             this.activeGrippingHand == InteractionHandType.Left ? JointType.HandLeft : JointType.HandRight].Position),
                             handCircleRadius, handCircleRadius);
+
+                        // If we're in explode mode
+                        if (this.secondaryGripping) {
+                            Point leftPoint = this.SkeletonPointToScreen(this.activeSkeleton.Joints[JointType.HandLeft].Position),
+                                 rightPoint = this.SkeletonPointToScreen(this.activeSkeleton.Joints[JointType.HandRight].Position);
+
+                            // Draw the gripping hand circle around the secondary hand
+                            dc.DrawEllipse(null, activeHandPen, this.activeGrippingHand == InteractionHandType.Left ? rightPoint : leftPoint,
+                                handCircleRadius, handCircleRadius);
+
+                            // Draw the concentric grip indication circles (initial grip radius, explode threshold, collapse threshold)
+                            Point center = new Point((leftPoint.X + rightPoint.X) * 0.5, (leftPoint.Y + rightPoint.Y) * 0.5);
+
+                            // Get the pixel radii using the scalefactor * 400 (& 0.5 for converting diameter -> radius)
+                            double initGripRad =  this.exploder.InitialGripDistance         * ImageScaleFactor * 400 * 0.5;
+                            double explodeRad  = (this.exploder.InitialGripDistance + 0.32) * ImageScaleFactor * 400 * 0.5; //  ~0.3 (+)
+                            double collapseRad = (this.exploder.InitialGripDistance - 0.29) * ImageScaleFactor * 400 * 0.5; // ~-0.3 (-)
+
+                            dc.DrawEllipse(null, gripInitPen,   center, initGripRad, initGripRad);
+                            dc.DrawEllipse(null, gripThreshPen, center, explodeRad,  explodeRad);
+                            dc.DrawEllipse(null, gripThreshPen, center, collapseRad, collapseRad);
+                        }
 
                         // Loop the radius animation
                         this.handCircleRadius += 1.5;

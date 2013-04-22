@@ -20,6 +20,9 @@ namespace Rotate3D {
         private Skeleton activeSkeleton;
         private InteractionHandType activeGrippingHand;
 
+        // Additional modes
+        private Exploder exploder;
+        private bool secondaryGripping = false;
         private bool isCoasting = false;
 
         // View states
@@ -34,7 +37,7 @@ namespace Rotate3D {
         private long guidePositionStartTime = 0;
 
         // Cached actions
-        private Action helpTipWindowDisplayAction, helpWindowShowAction, helpWindowHideAction;
+        private Action helpTipWindowShowAction, helpTipWindowHideAction, helpWindowShowAction, helpWindowHideAction;
 
         private void ProcessSkeletons() {
             {
@@ -55,21 +58,41 @@ namespace Rotate3D {
                 Skeleton prevSkeleton = this.activeSkeleton;
                 this.activeSkeleton   = bestSkel;
 
-                // If new skeleton found
                 if ((prevSkeleton == null && this.activeSkeleton != null) ||
                     (prevSkeleton != null && this.activeSkeleton != null && prevSkeleton.TrackingId != this.activeSkeleton.TrackingId)) {
+                    // New skeleton found
                     
                     // Reset
                     this.viewRotationX = 0;
                     this.viewRotationY = 0;
 
                     // Display new skeleton help tip
-                    if (this.helpTipWindowDisplayAction == null)
-                        this.helpTipWindowDisplayAction = new Action(delegate() {
+                    if (this.helpTipWindowShowAction == null)
+                        this.helpTipWindowShowAction = new Action(delegate() {
                             this.helpTipWindow.FadeIn();
                             this.helpTipWindow.FadeOutAfter(6, false, true);
                         });
-                    this.helpTipWindow.Dispatcher.Invoke(this.helpTipWindowDisplayAction);
+                    this.helpTipWindow.Dispatcher.Invoke(this.helpTipWindowShowAction);
+                }
+                else if (prevSkeleton != null && this.activeSkeleton == null) {
+                    // Skeleton lost
+
+                    this.activeGrippingHand = InteractionHandType.None;
+                    this.helpWindowVisible  = false;
+                    this.isCoasting         = true;
+
+                    // Fade windows out
+                    if (this.helpTipWindowHideAction == null)
+                        this.helpTipWindowHideAction = new Action(delegate() {
+                            this.helpTipWindow.FadeOut();
+                        });
+                    this.helpTipWindow.Dispatcher.Invoke(this.helpTipWindowHideAction);
+
+                    if (this.helpWindowHideAction == null)
+                        this.helpWindowHideAction = new Action(delegate() {
+                            this.helpWindow.FadeOut();
+                        });
+                    this.helpWindow.Dispatcher.Invoke(this.helpWindowHideAction);
                 }
             }
 
@@ -102,8 +125,13 @@ namespace Rotate3D {
                     this.guidePositionStartTime = 0;
                 }
 
-                // Gripping and moving
-                if (this.activeGrippingHand != InteractionHandType.None) {
+                // Exploding mode, process skeleton and animate if necessary
+                this.exploder.ProcessSkeleton(this.activeSkeleton, this.activeGrippingHand != InteractionHandType.None && this.secondaryGripping);
+                if (this.sw.Animating)
+                    this.sw.AnimateStep();
+
+                // Primary gripping and moving
+                if (!this.secondaryGripping && this.activeGrippingHand != InteractionHandType.None) {
                     // Calculate the new arm position
                     double newX = GetArmHorizontalPosition(this.activeGrippingHand, this.activeSkeleton),
                            newY = GetArmVerticalPosition  (this.activeGrippingHand, this.activeSkeleton),
@@ -115,13 +143,13 @@ namespace Rotate3D {
                     this.positionHistory[this.positionHistoryIdx].Z = newZ;
 
                     // Average the history to remove jitter and provide easing
-                    double avgXDiff = this.positionHistory.Select(p => p.X).Sum() / this.positionHistory.Length,
-                           avgYDiff = this.positionHistory.Select(p => p.Y).Sum() / this.positionHistory.Length,
-                           avgZDiff = this.positionHistory.Select(p => p.Z).Sum() / this.positionHistory.Length;
+                    double avgX = this.positionHistory.Select(p => p.X).Sum() / this.positionHistory.Length,
+                           avgY = this.positionHistory.Select(p => p.Y).Sum() / this.positionHistory.Length,
+                           avgZ = this.positionHistory.Select(p => p.Z).Sum() / this.positionHistory.Length;
 
-                    double xDiff = avgXDiff - this.prevPosition.X,
-                           yDiff = avgYDiff - this.prevPosition.Y,
-                           zDiff = avgZDiff - this.prevPosition.Z;
+                    double xDiff = avgX - this.prevPosition.X,
+                           yDiff = avgY - this.prevPosition.Y,
+                           zDiff = avgZ - this.prevPosition.Z;
 
                     // Convert the position to actual pixels
                     double angleX = xDiff * RotationConversion,
@@ -142,8 +170,7 @@ namespace Rotate3D {
                     this.prevPosition.Z += zDiff;
 
                     // Update the circular history buffer index
-                    this.positionHistoryIdx++;
-                    if (this.positionHistoryIdx >= this.positionHistory.Length) this.positionHistoryIdx = 0;
+                    this.positionHistoryIdx = (this.positionHistoryIdx + 1) % this.positionHistory.Length;
 
                     // Move the model accordingly
                     this.sw.AdjustViewAngle(angleX, angleY);
@@ -200,25 +227,41 @@ namespace Rotate3D {
                                 if (this.activeGrippingHand == InteractionHandType.None) {
                                     this.activeGrippingHand = hp.HandType;
 
-                                    // Save current position
-                                    this.prevPosition.X = GetArmHorizontalPosition(hp.HandType, this.activeSkeleton);
-                                    this.prevPosition.Y = GetArmVerticalPosition  (hp.HandType, this.activeSkeleton);
-                                    this.prevPosition.Z = GetArmZoomAmount        (hp.HandType, this.activeSkeleton);
-
-                                    // Fill position history
-                                    for (int i = 0; i < this.positionHistory.Length; i++)
-                                        this.positionHistory[i] = this.prevPosition;
-                                    this.positionHistoryIdx = 0;
+                                    // Save our new position
+                                    this.RefreshGripHandPosition();
 
                                     this.isCoasting = false;
                                     this.sw.PreRender();
                                 }
+                                // If already gripping, secondary grip
+                                else this.secondaryGripping = true;
                                 break;
                             case InteractionHandEventType.GripRelease:
                                 // Only release the active grip
                                 if (hp.HandType == this.activeGrippingHand) {
-                                    this.activeGrippingHand = InteractionHandType.None;
-                                    this.isCoasting = true;
+                                    // Transfer grip control to secondary hand if possible
+                                    if (this.secondaryGripping) {
+                                        this.activeGrippingHand = this.activeGrippingHand == InteractionHandType.Left ? InteractionHandType.Right : InteractionHandType.Left;
+                                        this.secondaryGripping  = false;
+
+                                        // Prevent jumping
+                                        this.RefreshGripHandPosition();
+                                    }
+                                    else {
+                                        // No secondary gripping, so stop control and activate coasting
+                                        this.activeGrippingHand = InteractionHandType.None;
+                                        this.isCoasting         = true;
+
+                                        this.helpTipWindow.FadeOut(false, true);
+                                        this.helpWindow.FadeOut   (false, true);
+                                        this.helpWindowVisible = false;
+                                    }
+                                }
+                                else {
+                                    this.secondaryGripping = false;
+
+                                    // Prevent jumping
+                                    this.RefreshGripHandPosition();
                                 }
                                 break;
                         }
@@ -226,6 +269,17 @@ namespace Rotate3D {
                     break;
                 }
             }
+        }
+
+        private void RefreshGripHandPosition() {
+            // Save current position
+            this.prevPosition.X = GetArmHorizontalPosition(this.activeGrippingHand, this.activeSkeleton);
+            this.prevPosition.Y = GetArmVerticalPosition  (this.activeGrippingHand, this.activeSkeleton);
+            this.prevPosition.Z = GetArmZoomAmount        (this.activeGrippingHand, this.activeSkeleton);
+
+            // Fill position history with current position to clear previous values
+            for (int i = 0; i < this.positionHistory.Length; i++)
+                this.positionHistory[i] = this.prevPosition;
         }
 
         #region Hand Position/Angle Calculation
