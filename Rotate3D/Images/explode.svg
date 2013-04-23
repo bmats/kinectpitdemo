@@ -10,16 +10,13 @@
    version="1.1"
    id="ExplodeDiagram"
    width="50.561676"
-   height="100.95788"
-   viewBox="0 0 50.561676 100.95788"
-   enable-background="new 0 0 100 100"
-   xml:space="preserve">
+   height="100.95788">
   <title
-     id="title4721">Kinect Explode Gesture Diagram</title>
+     id="title4721">Kinect Explode Original Gesture Diagram</title>
   <metadata
      id="metadata6719"><rdf:RDF><cc:Work
        rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
-         rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title>Kinect Explode Gesture Diagram</dc:title><dc:creator><cc:Agent><dc:title>Bryce Matsumori</dc:title></cc:Agent></dc:creator></cc:Work></rdf:RDF></metadata><defs
+         rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title>Kinect Explode Original Gesture Diagram</dc:title><dc:creator><cc:Agent><dc:title>Bryce Matsumori</dc:title></cc:Agent></dc:creator></cc:Work></rdf:RDF></metadata><defs
    id="defs6717"><clipPath
      clipPathUnits="userSpaceOnUse"
      id="clipPath4713"><path
@@ -35,17 +32,8 @@
    guidetolerance="10"
    inkscape:pageopacity="1"
    inkscape:pageshadow="2"
-   inkscape:window-width="1440"
-   inkscape:window-height="848"
    id="namedview6715"
    showgrid="false"
-   inkscape:zoom="3.5797234"
-   inkscape:cx="25.275982"
-   inkscape:cy="62.862306"
-   inkscape:window-x="-8"
-   inkscape:window-y="-8"
-   inkscape:window-maximized="1"
-   inkscape:current-layer="layer6"
    fit-margin-top="0"
    fit-margin-left="0"
    fit-margin-right="0"

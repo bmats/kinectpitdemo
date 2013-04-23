@@ -124,7 +124,7 @@ namespace Rotate3D {
             this.helpTipWindow.Topmost = true;
 
             // Create the help window
-            this.helpWindow = new ThemedOverlayWindow(new KinectHelpControl(), new Size(604, 604), OverlayPosition.Center, double.PositiveInfinity, false);
+            this.helpWindow = new ThemedOverlayWindow(new KinectHelpControl(), new Size(604, 654), OverlayPosition.Center, double.PositiveInfinity, false);
             this.helpWindow.Topmost = true;
 
             // Process skeletons in the background
