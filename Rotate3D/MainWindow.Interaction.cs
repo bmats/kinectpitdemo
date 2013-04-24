@@ -104,6 +104,10 @@ namespace Rotate3D {
                 }
             }
 
+            // Run explode animation if necessary (regardless of whether we have a skeleton)
+            if (this.sw.Animating)
+                this.sw.AnimateStep();
+
             if (this.activeSkeleton != null) {
                 // Show or hide help window
                 bool inGuidePosition = this.activeSkeleton.IsInGuidePosition();
@@ -133,10 +137,8 @@ namespace Rotate3D {
                     this.guidePositionStartTime = 0;
                 }
 
-                // Exploding mode, process skeleton and animate if necessary
+                // Process skeleton for exploding
                 this.exploder.ProcessSkeleton(this.activeSkeleton, this.activeGrippingHand != InteractionHandType.None && this.secondaryGripping);
-                if (this.sw.Animating)
-                    this.sw.AnimateStep();
 
                 // Primary gripping and moving
                 if (!this.secondaryGripping && this.activeGrippingHand != InteractionHandType.None) {
