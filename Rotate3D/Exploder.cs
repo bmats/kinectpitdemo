@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Configuration;
 using Microsoft.Kinect;
 
 namespace Rotate3D {
@@ -12,7 +13,13 @@ namespace Rotate3D {
     class Exploder {
         private SolidWorks sw;
 
-        private const double ExplodeDiffThreshold = 0.3, CollapseDiffThreshold = -0.3;
+        // Loaded from App.config
+        private static double ExplodeDiffThreshold, CollapseDiffThreshold;
+        static Exploder() {
+            double temp;
+            ExplodeDiffThreshold  = double.TryParse(ConfigurationManager.AppSettings["ExplodeThreshold"],  out temp) ? temp :  0.3;
+            CollapseDiffThreshold = double.TryParse(ConfigurationManager.AppSettings["CollapseThreshold"], out temp) ? temp : -0.3;
+        }
 
         private double initGripDist = 0;
         private double distance     = 0;

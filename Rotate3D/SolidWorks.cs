@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
-using System.Windows;
+using System.Configuration;
 using SldWorks;
 using SwConst;
 using SwMotionStudy;
@@ -17,9 +17,21 @@ namespace Rotate3D {
     class SolidWorks {
         private static ISldWorks app = new SldWorks.SldWorks();
 
-        private const string SWAnimationName  = "KinectExplode";
-        private const long   AnimLengthMillis = 8000, AnimDisplayLengthMillis = 1000;
-        private const double AnimLengthSecs   = 8.0,  AnimDisplayLengthSecs   = 1.0;
+        // Loaded and generated from App.config
+        private static string SWAnimationName;
+        private static double AnimLengthSecs,   AnimDisplayLengthSecs;
+        private static long   AnimLengthMillis, AnimDisplayLengthMillis;
+        static SolidWorks() {
+            SWAnimationName = System.Configuration.ConfigurationManager.AppSettings["SWMotionStudyName"];
+            if (string.IsNullOrWhiteSpace(SWAnimationName)) SWAnimationName = "KinectExplode";
+
+            double temp;
+            AnimLengthSecs        = double.TryParse(System.Configuration.ConfigurationManager.AppSettings["SWMotionStudyLength"],           out temp) ? temp : 8.0;
+            AnimDisplayLengthSecs = double.TryParse(System.Configuration.ConfigurationManager.AppSettings["ExplodeAnimationDisplayLength"], out temp) ? temp : 1.0;
+
+            AnimLengthMillis        = (long)(AnimLengthSecs        * 1000);
+            AnimDisplayLengthMillis = (long)(AnimDisplayLengthSecs * 1000);
+        }
 
         // SolidWorks interfaces
         private ModelDoc2          modelDoc;

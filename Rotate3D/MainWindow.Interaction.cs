@@ -5,12 +5,20 @@ using System.Text;
 using System.Windows;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Configuration;
 using Microsoft.Kinect;
 using Microsoft.Kinect.Toolkit.Interaction;
 
 namespace Rotate3D {
     public partial class MainWindow {
-        private const double RotationConversion = 3, ZoomConversion = 1.3, Inertia = 0.8;
+        // Loaded from App.config
+        private static double RotationConversion, ZoomConversion, Inertia;
+        static MainWindow() {
+            double temp;
+            RotationConversion = double.TryParse(ConfigurationManager.AppSettings["RotationConversion"], out temp) ? temp : 3.0;
+            ZoomConversion     = double.TryParse(ConfigurationManager.AppSettings["ZoomConversion"],     out temp) ? temp : 1.3;
+            Inertia            = double.TryParse(ConfigurationManager.AppSettings["Inertia"],            out temp) ? temp : 0.8;
+        }
 
         // Connection
         private SolidWorks sw;
