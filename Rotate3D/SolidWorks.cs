@@ -152,8 +152,8 @@ namespace Rotate3D {
 
             // If mode has changed or in correct mode, but not finished animating
             if (this.targetAnim != currentAnim ||
-                this.targetAnim == AnimationTarget.Explode  && this.currentAnimTime < AnimLengthSecs - 0.01 ||
-                this.targetAnim == AnimationTarget.Collapse && this.currentAnimTime > 0.01) {
+               (this.targetAnim == AnimationTarget.Explode  && this.currentAnimTime < AnimLengthSecs - 0.01) ||
+               (this.targetAnim == AnimationTarget.Collapse && this.currentAnimTime > 0.01)) {
                 
                 if (animStartTime == 0) {
                     this.animStartTime   = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
@@ -197,6 +197,9 @@ namespace Rotate3D {
         /// Starts the explode animation.
         /// </summary>
         public void PlayExplode() {
+            // Finish animation before changing
+            if (this.Animating) return;
+
             this.targetAnim = AnimationTarget.Explode;
         }
 
@@ -204,6 +207,9 @@ namespace Rotate3D {
         /// Starts the collapse animation.
         /// </summary>
         public void PlayCollapse() {
+            // Finish animation before changing
+            if (this.Animating) return;
+
             this.targetAnim = AnimationTarget.Collapse;
         }
 
@@ -211,7 +217,11 @@ namespace Rotate3D {
         /// Gets whether or not an animation is currently running (and should be stepped).
         /// </summary>
         public bool Animating {
-            get { return this.targetAnim != this.currentAnim; }
+            get {
+                return this.targetAnim != currentAnim ||
+                      (this.targetAnim == AnimationTarget.Explode  && this.currentAnimTime < AnimLengthSecs - 0.01) ||
+                      (this.targetAnim == AnimationTarget.Collapse && this.currentAnimTime > 0.01);
+            }
         }
 
         /// <summary>
