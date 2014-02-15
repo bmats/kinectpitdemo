@@ -6,16 +6,16 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Configuration;
-using SldWorks;
-using SwConst;
-using SwMotionStudy;
+using SolidWorks.Interop.sldworks;
+using SolidWorks.Interop.swconst;
+using SolidWorks.Interop.swmotionstudy;
 
 namespace Rotate3D {
     /// <summary>
     /// Interfaces with SolidWorks using the COM API.
     /// </summary>
     class SolidWorks {
-        private static ISldWorks app = new SldWorks.SldWorks();
+        private static SldWorks app = new SldWorks();
 
         // Loaded and generated from App.config
         private static string SWAnimationName;
@@ -34,8 +34,7 @@ namespace Rotate3D {
         }
 
         // SolidWorks interfaces
-        private ModelDoc2          modelDoc;
-        private AssemblyDoc        assemblyDoc;
+        private IModelDoc2          modelDoc;
         private ModelDocExtension  extension;
         private ModelView          view;
         private MotionStudyManager motionManager;
@@ -78,14 +77,12 @@ namespace Rotate3D {
         /// </summary>
         /// <exception cref="Rotate3D.SolidWorksException">On an error communicating with SolidWorks.</exception>
         public SolidWorks() {
-            this.modelDoc    = (ModelDoc2)app.ActiveDoc;
-            this.assemblyDoc = (AssemblyDoc)app.ActiveDoc;
-
+            this.modelDoc = (ModelDoc2)app.ActiveDoc;
             if (this.modelDoc == null)
                 throw new SolidWorksException("No open SolidWorks document found!");
 
-            this.extension   = this.modelDoc.Extension;
-            this.view        = (ModelView)this.modelDoc.ActiveView;
+            this.extension = this.modelDoc.Extension;
+            this.view      = (ModelView)this.modelDoc.ActiveView;
 
             // Find the explode animation
             this.motionManager = (MotionStudyManager)this.extension.GetMotionStudyManager();
