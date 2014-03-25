@@ -2,9 +2,9 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Name="Window" Title="Kinect Stream"
-        Loaded="WindowLoaded" Closing="WindowClosing" MouseDoubleClick="WindowMouseDoubleClick"
-        WindowStyle="None" Icon="Kinect.ico" Background="#FF511C74" ResizeMode="NoResize" SizeToContent="WidthAndHeight" Topmost="True" BorderBrush="White" BorderThickness="2">
+        Loaded="WindowLoaded" Closing="WindowClosing" MouseDown="WindowMouseDown"
+        WindowStyle="None" Icon="Kinect.ico" Background="#FF111111" ResizeMode="NoResize" SizeToContent="WidthAndHeight" Topmost="True" BorderBrush="#FFE4C025" BorderThickness="2" AllowsTransparency="True" Visibility="Visible">
     <Grid>
-        <Image Name="Image" Width="400" Height="300" Margin="10,10,10,10" />
+        <Image Name="Image" Width="400" Height="300" Margin="6" />
     </Grid>
 </Window>

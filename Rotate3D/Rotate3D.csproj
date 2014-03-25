@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -9,10 +9,11 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Rotate3D</RootNamespace>
     <AssemblyName>KinectRotate3D</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <WarningLevel>4</WarningLevel>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -36,6 +37,9 @@
   <PropertyGroup>
     <ApplicationIcon>Kinect.ico</ApplicationIcon>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Kinect, Version=1.8.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.Kinect.Toolkit.Interaction, Version=1.8.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -43,15 +47,15 @@
       <HintPath>C:\Program Files\Microsoft SDKs\Kinect\Developer Toolkit v1.8.0\Assemblies\Microsoft.Kinect.Toolkit.Interaction.dll</HintPath>
     </Reference>
     <Reference Include="SolidWorks.Interop.sldworks">
-      <HintPath>C:\Program Files\SolidWorks Corp\SolidWorks\api\redist\SolidWorks.Interop.sldworks.dll</HintPath>
+      <HintPath>..\lib\SolidWorks.Interop.sldworks.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="SolidWorks.Interop.swconst">
-      <HintPath>C:\Program Files\SolidWorks Corp\SolidWorks\api\redist\SolidWorks.Interop.swconst.dll</HintPath>
+      <HintPath>..\lib\SolidWorks.Interop.swconst.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="SolidWorks.Interop.swmotionstudy">
-      <HintPath>C:\Program Files\SolidWorks Corp\SolidWorks\api\redist\SolidWorks.Interop.swmotionstudy.dll</HintPath>
+      <HintPath>..\lib\SolidWorks.Interop.swmotionstudy.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="System" />
@@ -75,7 +79,13 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Banner.xaml.cs">
+      <DependentUpon>Banner.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Exploder.cs" />
+    <Compile Include="Hand.xaml.cs">
+      <DependentUpon>Hand.xaml</DependentUpon>
+    </Compile>
     <Compile Include="KinectExtensions.cs" />
     <Compile Include="KinectHelpControl.xaml.cs">
       <DependentUpon>KinectHelpControl.xaml</DependentUpon>
@@ -84,12 +94,21 @@
       <DependentUpon>KinectHelpTipControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="SolidWorks.cs" />
+    <Compile Include="SolidWorksException.cs" />
     <Compile Include="ThemedTextControl.xaml.cs">
       <DependentUpon>ThemedTextControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="ThemedOverlayWindow.xaml.cs">
       <DependentUpon>ThemedOverlayWindow.xaml</DependentUpon>
     </Compile>
+    <Page Include="Banner.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Hand.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="KinectHelpControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -150,16 +169,26 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="KinectInteraction180_32.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="KinectInteraction180_64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Resource Include="Images\explode.png" />
     <Resource Include="Images\rotate.png" />
     <Resource Include="Images\KinectSensor.png" />
     <Resource Include="Kinect.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\lib\KinectInteraction180_32.dll">
+      <Link>KinectInteraction180_32.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\lib\KinectInteraction180_64.dll">
+      <Link>KinectInteraction180_64.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\KinectUtilities\KinectUtilities.csproj">
+      <Project>{7190db19-5c11-403e-94ae-af58b4eca9f2}</Project>
+      <Name>KinectUtilities</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

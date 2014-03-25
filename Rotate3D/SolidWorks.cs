@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Runtime.InteropServices;
 using System.Diagnostics;
-using System.Configuration;
+using System.Runtime.InteropServices;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using SolidWorks.Interop.swmotionstudy;
@@ -34,7 +29,7 @@ namespace Rotate3D {
         }
 
         // SolidWorks interfaces
-        private IModelDoc2          modelDoc;
+        private IModelDoc2         modelDoc;
         private ModelDocExtension  extension;
         private ModelView          view;
         private MotionStudyManager motionManager;
@@ -77,42 +72,45 @@ namespace Rotate3D {
         /// </summary>
         /// <exception cref="Rotate3D.SolidWorksException">On an error communicating with SolidWorks.</exception>
         public SolidWorks() {
-            this.modelDoc = (ModelDoc2)app.ActiveDoc;
-            if (this.modelDoc == null)
-                throw new SolidWorksException("No open SolidWorks document found!");
+            modelDoc = (ModelDoc2)app.ActiveDoc;
+            if (modelDoc == null) throw new SolidWorksException("No open SolidWorks document found!");
 
-            this.extension = this.modelDoc.Extension;
-            this.view      = (ModelView)this.modelDoc.ActiveView;
+            extension = modelDoc.Extension;
+            view      = (ModelView)modelDoc.ActiveView;
 
             // Find the explode animation
-            this.motionManager = (MotionStudyManager)this.extension.GetMotionStudyManager();
-            this.explodeMotion = motionManager.GetMotionStudy(SWAnimationName);
-            if (this.explodeMotion != null)
-                this.explodeMotion.SetTime(0);
+            motionManager = (MotionStudyManager)extension.GetMotionStudyManager();
+            explodeMotion = motionManager.GetMotionStudy(SWAnimationName);
+            if (explodeMotion != null) explodeMotion.SetTime(0);
 
             // Set lower quality for quicker rendering
-            this.view.DisplayMode = (int)swViewDisplayMode_e.swViewDisplayMode_Shaded;
+            view.DisplayMode = (int)swViewDisplayMode_e.swViewDisplayMode_Shaded;
+        }
+
+        ~SolidWorks() {
+            // Reset view to high quality on exit
+            if (view != null) view.DisplayMode = (int)swViewDisplayMode_e.swViewDisplayMode_ShadedWithEdges;
         }
 
         /// <summary>
-        /// Call before gripping, to pause SolidWorks dynamics.
+        /// Call before gripping to start faster rotation of model view.
         /// </summary>
         public void PreRender() {
-            this.view.StopDynamics();
+            view.StartDynamics();
         }
 
         /// <summary>
-        /// Call after gripping, to restart SolidWorks dynamics.
+        /// Call after gripping to start faster rotation of model view.
         /// </summary>
         public void PostRender() {
-            this.view.StartDynamics();
+            view.StopDynamics();
         }
 
         /// <summary>
         /// Zoom the SolidWorks view to fit.
         /// </summary>
         public void ZoomToFit() {
-            this.modelDoc.ViewZoomtofit2();
+            modelDoc.ViewZoomtofit2();
         }
 
         /// <summary>
@@ -124,7 +122,7 @@ namespace Rotate3D {
             // Flip y for input
             yAngle *= -1;
 
-            this.view.RotateAboutCenter(yAngle, xAngle);
+            view.RotateAboutCenter(yAngle, xAngle);
         }
 
         /// <summary>
@@ -138,55 +136,55 @@ namespace Rotate3D {
             // Convert to a factor relative to 1.0
             zDist += 1;
 
-            this.view.ZoomByFactor(zDist);
+            view.ZoomByFactor(zDist);
         }
 
         /// <summary>
         /// Steps the explode animation, if running.
         /// </summary>
         public void AnimateStep() {
-            if (this.explodeMotion == null) return;
+            if (explodeMotion == null) return;
 
             // If mode has changed or in correct mode, but not finished animating
-            if (this.targetAnim != currentAnim ||
-               (this.targetAnim == AnimationTarget.Explode  && this.currentAnimTime < AnimLengthSecs - 0.01) ||
-               (this.targetAnim == AnimationTarget.Collapse && this.currentAnimTime > 0.01)) {
+            if (targetAnim != currentAnim ||
+               (targetAnim == AnimationTarget.Explode  && currentAnimTime < AnimLengthSecs - 0.01) ||
+               (targetAnim == AnimationTarget.Collapse && currentAnimTime > 0.01)) {
                 
                 if (animStartTime == 0) {
-                    this.animStartTime   = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
-                    this.tempTimeDiff    = 0;
-                    this.tempAnimRelTime = 0;
+                    animStartTime   = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+                    tempTimeDiff    = 0;
+                    tempAnimRelTime = 0;
                 }
                 else {
-                    this.tempTimeDiff    = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - this.animStartTime;
-                    this.tempAnimRelTime = ((double)this.tempTimeDiff / AnimDisplayLengthMillis) * AnimLengthSecs;
+                    tempTimeDiff    = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - animStartTime;
+                    tempAnimRelTime = ((double)tempTimeDiff / AnimDisplayLengthMillis) * AnimLengthSecs;
                 }
 
-                if (this.targetAnim == AnimationTarget.Explode) {
+                if (targetAnim == AnimationTarget.Explode) {
                     // Exploding
-                    this.currentAnimTime = this.tempAnimRelTime;
+                    currentAnimTime = tempAnimRelTime;
 
-                    if (this.currentAnimTime > AnimLengthSecs - 0.01) {
+                    if (currentAnimTime > AnimLengthSecs - 0.01) {
                         // Finished animation
-                        this.currentAnimTime = AnimLengthSecs;
-                        this.currentAnim     = this.targetAnim;
-                        this.animStartTime   = 0;
+                        currentAnimTime = AnimLengthSecs;
+                        currentAnim     = targetAnim;
+                        animStartTime   = 0;
                     }
                 }
                 else {
                     // Collapsing
-                    this.currentAnimTime = AnimLengthSecs - this.tempAnimRelTime;
+                    currentAnimTime = AnimLengthSecs - tempAnimRelTime;
 
-                    if (this.currentAnimTime < 0.01) {
+                    if (currentAnimTime < 0.01) {
                         // Finished animation
-                        this.currentAnimTime = 0;
-                        this.currentAnim     = this.targetAnim;
-                        this.animStartTime   = 0;
+                        currentAnimTime = 0;
+                        currentAnim     = targetAnim;
+                        animStartTime   = 0;
                     }
                 }
 
                 // Go to the specified time (animate)
-                this.explodeMotion.SetTime(this.currentAnimTime);
+                explodeMotion.SetTime(currentAnimTime);
             }
         }
 
@@ -195,9 +193,9 @@ namespace Rotate3D {
         /// </summary>
         public void PlayExplode() {
             // Finish animation before changing
-            if (this.Animating) return;
+            if (Animating) return;
 
-            this.targetAnim = AnimationTarget.Explode;
+            targetAnim = AnimationTarget.Explode;
         }
 
         /// <summary>
@@ -207,7 +205,7 @@ namespace Rotate3D {
             // Finish animation before changing
             if (this.Animating) return;
 
-            this.targetAnim = AnimationTarget.Collapse;
+            targetAnim = AnimationTarget.Collapse;
         }
 
         /// <summary>
@@ -215,9 +213,9 @@ namespace Rotate3D {
         /// </summary>
         public bool Animating {
             get {
-                return this.targetAnim != currentAnim ||
-                      (this.targetAnim == AnimationTarget.Explode  && this.currentAnimTime < AnimLengthSecs - 0.01) ||
-                      (this.targetAnim == AnimationTarget.Collapse && this.currentAnimTime > 0.01);
+                return targetAnim != currentAnim ||
+                      (targetAnim == AnimationTarget.Explode  && currentAnimTime < AnimLengthSecs - 0.01) ||
+                      (targetAnim == AnimationTarget.Collapse && currentAnimTime > 0.01);
             }
         }
 
@@ -225,26 +223,7 @@ namespace Rotate3D {
         /// Gets whether an explode motion study (with the name "KinectExplode") was found in the active document.
         /// </summary>
         public bool ExplodeAnimationFound {
-            get { return this.explodeMotion != null; }
-        }
-    }
-
-    /// <summary>
-    /// Thrown om errors communicating with SolidWorks.
-    /// </summary>
-    class SolidWorksException : Exception {
-        /// <summary>
-        /// Initializes a new instance of a SolidWorks exception.
-        /// </summary>
-        public SolidWorksException() : base() {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of a SolidWorks exception with the specified message.
-        /// </summary>
-        /// <param name="message">The message that describes the error.</param>
-        public SolidWorksException(string message)
-            : base(message) {
+            get { return explodeMotion != null; }
         }
     }
 }

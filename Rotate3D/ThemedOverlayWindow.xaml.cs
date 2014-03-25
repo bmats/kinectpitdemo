@@ -34,8 +34,7 @@ namespace Rotate3D {
     /// A Kinect-themed window which can be overlayed onscreen with custom controls.
     /// </summary>
     public partial class ThemedOverlayWindow : Window {
-        private bool doFadeIn;
-        private Storyboard activeStoryboard;
+        private bool fadeIn;
         private DispatcherTimer activeTimer;
 
         /// <summary>
@@ -61,7 +60,7 @@ namespace Rotate3D {
             InitializeComponent();
             this.RootGrid.Children.Add(control);
 
-            this.Width = size.Width;
+            this.Width  = size.Width;
             this.Height = size.Height;
 
             // Move window to appropriate position
@@ -72,54 +71,38 @@ namespace Rotate3D {
                     break;
                 case OverlayPosition.TopCenter:
                     this.Left = SystemParameters.PrimaryScreenWidth * 0.5 - this.Width * 0.5;
-                    this.Top  = 150;
+                    this.Top  = 225;
                     break;
             }
 
             // Set fading in if necessary
-            this.doFadeIn = fadeIn;
+            this.fadeIn = fadeIn;
             if (fadeIn) this.Show();
 
             // Create a timer to fade this window out and close it if a finite time is specified
             if (!double.IsInfinity(seconds))
-                this.FadeOutAfter(seconds, true, false);
+                FadeOutAfter(seconds, true, false);
         }
 
         private void WindowLoaded(object sender, EventArgs e) {
             // Fade in _after_ the window is fully loadeed
-            if (this.doFadeIn) FadeIn();
+            if (fadeIn) FadeIn();
         }
 
         /// <summary>
         /// Fades in the window.
         /// </summary>
         public void FadeIn() {
-            if (this.activeStoryboard != null) this.activeStoryboard.Stop();
-            if (this.activeTimer      != null) this.activeTimer.Stop();
+            if (activeTimer != null) activeTimer.Stop();
 
             this.Show();
 
-            // Create an animation to fade to opacity 1
-            DoubleAnimation animation = new DoubleAnimation();
-            animation.From = 0.0;
-            animation.To   = 1.0;
-            animation.Duration = new Duration(TimeSpan.FromSeconds(0.5));
-
-            // Attach the animation to the window opacity
-            Storyboard storyboard = new Storyboard();
-            storyboard.Children.Add(animation);
-            Storyboard.SetTarget(animation, this);
-            Storyboard.SetTargetProperty(animation, new PropertyPath("(Window.Opacity)"));
-            storyboard.Begin();
-
-            this.activeStoryboard = storyboard;
-        }
-
-        /// <summary>
-        /// Fades out the window, hiding it after the fade out is completed.
-        /// </summary>
-        public void FadeOut() {
-            this.FadeOut(false, true);
+            // Fade in to full opacity
+            this.BeginAnimation(Window.OpacityProperty, new DoubleAnimation {
+                From = 0.0,
+                To   = 1.0,
+                Duration = new Duration(TimeSpan.FromSeconds(0.5))
+            }, HandoffBehavior.SnapshotAndReplace);
         }
 
         /// <summary>
@@ -127,29 +110,22 @@ namespace Rotate3D {
         /// </summary>
         /// <param name="close">Whether to Close() the window on completion.</param>
         /// <param name="hide">Whether to Hide() the window on completion.</param>
-        public void FadeOut(bool close, bool hide) {
-            if (this.activeStoryboard != null) this.activeStoryboard.Stop();
-            if (this.activeTimer      != null) this.activeTimer.Stop();
+        public void FadeOut(bool close = false, bool hide = true) {
+            if (activeTimer != null) activeTimer.Stop();
 
-            // Create an animation to fade to opacity 0
-            DoubleAnimation animation = new DoubleAnimation();
-            animation.From = 1.0;
-            animation.To   = 0.0;
-            animation.Duration = new Duration(TimeSpan.FromSeconds(0.5));
-
-            // Attach the animation to the window opacity
-            Storyboard storyboard = new Storyboard();
-            storyboard.Children.Add(animation);
-            Storyboard.SetTarget(animation, this);
-            Storyboard.SetTargetProperty(animation, new PropertyPath("(Window.Opacity)"));
-            storyboard.Completed += delegate(object sender2, EventArgs e2) {
+            // Fade to opacity 0
+            DoubleAnimation anim = new DoubleAnimation {
+                From = 1.0,
+                To   = 0.0,
+                Duration = new Duration(TimeSpan.FromSeconds(0.5))
+            };
+            anim.Completed += (object sender, EventArgs e) => {
                 // Trigger appropriate actions on completion
                 if (close) this.Close();
                 if (hide)  this.Hide();
             };
-            storyboard.Begin();
 
-            this.activeStoryboard = storyboard;
+            this.BeginAnimation(Window.OpacityProperty, anim, HandoffBehavior.SnapshotAndReplace);
         }
 
         /// <summary>
@@ -161,30 +137,23 @@ namespace Rotate3D {
         public void FadeOutAfter(double seconds, bool close, bool hide) {
             DispatcherTimer timer = new DispatcherTimer();
             timer.Interval = new TimeSpan((long)(seconds * 1.0e7));
-            timer.Tick += delegate(object sender, EventArgs e) {
-                if (this.activeStoryboard != null) this.activeStoryboard.Stop();
-                if (this.activeTimer      != null) this.activeTimer.Stop();
+            timer.Tick += (object sender, EventArgs e) => {
+                if (activeTimer != null) activeTimer.Stop();
 
-                DoubleAnimation animation = new DoubleAnimation();
-                animation.From = 1.0;
-                animation.To = 0.0;
-                animation.Duration = new Duration(TimeSpan.FromSeconds(0.5));
-
-                Storyboard storyboard = new Storyboard();
-                storyboard.Children.Add(animation);
-                Storyboard.SetTarget(animation, this);
-                Storyboard.SetTargetProperty(animation, new PropertyPath("(Window.Opacity)"));
-                storyboard.Completed += delegate(object sender2, EventArgs e2) {
-                    if (close)
-                        this.Close();
-                    if (hide)
-                        this.Hide();
+                DoubleAnimation anim = new DoubleAnimation {
+                    From = 1.0,
+                    To   = 0.0,
+                    Duration = new Duration(TimeSpan.FromSeconds(0.5))
                 };
-                storyboard.Begin();
-                this.activeStoryboard = storyboard;
+                anim.Completed += (object s, EventArgs ea) => {
+                    if (close) this.Close();
+                    if (hide)  this.Hide();
+                };
+
+                this.BeginAnimation(Window.OpacityProperty, anim, HandoffBehavior.SnapshotAndReplace);
             };
             timer.Start();
-            this.activeTimer = timer;
+            activeTimer = timer;
         }
     }
 }

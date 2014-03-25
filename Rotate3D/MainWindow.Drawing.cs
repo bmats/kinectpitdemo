@@ -1,19 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Timers;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using Microsoft.Kinect;
 using Microsoft.Kinect.Toolkit.Interaction;
+using Warlords.Kinect;
 
 namespace Rotate3D {
     public partial class MainWindow {
@@ -26,9 +20,9 @@ namespace Rotate3D {
 
         // Color and depth image data storage
         private WriteableBitmap colorBitmap;
-        private ColorImagePoint[] colorCoordinates;
-        private byte[] colorPixels;
-        private DepthImagePixel[] depthPixels;
+        //private ColorImagePoint[] colorCoordinates;
+        //private byte[] colorPixels;
+        //private DepthImagePixel[] depthPixels;
         private int[] greenScreenPixelData;
         private WriteableBitmap playerMaskImage;
 
@@ -41,60 +35,89 @@ namespace Rotate3D {
             gripThreshPen = new Pen(new SolidColorBrush(Color.FromArgb( 50, 255, 255, 255)), 3);
         private Brush shadowBrush = new SolidColorBrush(Color.FromArgb(150, 0, 0, 0));
 
-        private void UpdateImage() {
-            using (DrawingContext dc = this.drawingGroup.Open()) {
-                // Draw color image
-                dc.DrawImage(this.colorBitmap, this.bitmapDrawingRect);
+        //private Storyboard activeStoryboard, fadeInStoryboard = null, fadeOutStoryboard = null;
 
-                // If we have player/skeleton data
-                if (this.activeSkeleton != null) {
-                    // Darken areas around the player using the opacity mask and the shadow brush
-                    dc.PushOpacityMask(new ImageBrush(this.playerMaskImage));
-                    dc.DrawRectangle(this.shadowBrush, null, this.bitmapDrawingRect);
-                    dc.Pop();
+        private void UpdateImage(object sender, ElapsedEventArgs e) {
+            if (colorBitmap == null) return;
 
-                    // Draw the skeleton
-                    this.DrawBonesAndJoints(this.activeSkeleton, dc);
+            Dispatcher.Invoke(() => {
+                using (DrawingContext dc = drawingGroup.Open()) {
+                    // Draw color image
+                    dc.DrawImage(colorBitmap, bitmapDrawingRect);
 
-                    // If gripping
-                    if (this.activeGrippingHand != InteractionHandType.None) {
-                        // Alter opacity with radius
-                        Color c = Color.FromArgb((byte)(255 - (this.handCircleRadius / MaxHandCircleRadius) * 255), 255, 255, 255);
-                        this.activeHandPen.Brush = new SolidColorBrush(c);
+                    // If we have player/skeleton data
+                    if (activeSkel != null) {
+                        // Darken areas around the player using the opacity mask and the shadow brush
+                        dc.PushOpacityMask(new ImageBrush(playerMaskImage));
+                        dc.DrawRectangle(shadowBrush, null, bitmapDrawingRect);
+                        dc.Pop();
 
-                        // Draw the gripping hand circle around the primary hand
-                        dc.DrawEllipse(null, activeHandPen, this.SkeletonPointToScreen(this.activeSkeleton.Joints[
-                            this.activeGrippingHand == InteractionHandType.Left ? JointType.HandLeft : JointType.HandRight].Position),
-                            handCircleRadius, handCircleRadius);
+                        // Draw the skeleton
+                        DrawBonesAndJoints(activeSkel, dc);
 
-                        // If we're in explode mode
-                        if (this.secondaryGripping) {
-                            Point leftPoint = this.SkeletonPointToScreen(this.activeSkeleton.Joints[JointType.HandLeft].Position),
-                                 rightPoint = this.SkeletonPointToScreen(this.activeSkeleton.Joints[JointType.HandRight].Position);
+                        // If active and gripping
+                        if (waver.State == WaveState.Active && activeGrippingHand != InteractionHandType.None) {
+                            // Alter opacity with radius
+                            Color c = Color.FromArgb((byte)(255 - (handCircleRadius / MaxHandCircleRadius) * 255), 255, 255, 255);
+                            activeHandPen.Brush = new SolidColorBrush(c);
 
-                            // Draw the gripping hand circle around the secondary hand
-                            dc.DrawEllipse(null, activeHandPen, this.activeGrippingHand == InteractionHandType.Left ? rightPoint : leftPoint,
+                            // Draw the gripping hand circle around the primary hand
+                            dc.DrawEllipse(null, activeHandPen, SkeletonPointToScreen(activeSkel.Joints[
+                                activeGrippingHand == InteractionHandType.Left ? JointType.HandLeft : JointType.HandRight].Position),
                                 handCircleRadius, handCircleRadius);
 
-                            // Draw the concentric grip indication circles (initial grip radius, explode threshold, collapse threshold)
-                            Point center = new Point((leftPoint.X + rightPoint.X) * 0.5, (leftPoint.Y + rightPoint.Y) * 0.5);
+                            // If we're in explode mode
+                            if (secondaryGripping) {
+                                Point leftPoint = SkeletonPointToScreen(activeSkel.Joints[JointType.HandLeft].Position),
+                                     rightPoint = SkeletonPointToScreen(activeSkel.Joints[JointType.HandRight].Position);
 
-                            // Get the pixel radii using the scalefactor * 400 (& 0.5 for converting diameter -> radius)
-                            double initGripRad =  this.exploder.InitialGripDistance         * ImageScaleFactor * 400 * 0.5;
-                            double explodeRad  = (this.exploder.InitialGripDistance + 0.32) * ImageScaleFactor * 400 * 0.5; //  ~0.3 (+)
-                            double collapseRad = (this.exploder.InitialGripDistance - 0.29) * ImageScaleFactor * 400 * 0.5; // ~-0.3 (-)
+                                // Draw the gripping hand circle around the secondary hand
+                                dc.DrawEllipse(null, activeHandPen, activeGrippingHand == InteractionHandType.Left ? rightPoint : leftPoint,
+                                    handCircleRadius, handCircleRadius);
 
-                            dc.DrawEllipse(null, gripInitPen,   center, initGripRad, initGripRad);
-                            dc.DrawEllipse(null, gripThreshPen, center, explodeRad,  explodeRad);
-                            dc.DrawEllipse(null, gripThreshPen, center, collapseRad, collapseRad);
+                                // Draw the concentric grip indication circles (initial grip radius, explode threshold, collapse threshold)
+                                Point center = new Point((leftPoint.X + rightPoint.X) * 0.5, (leftPoint.Y + rightPoint.Y) * 0.5);
+
+                                // Get the pixel radii using the scalefactor * 400 (& 0.5 for converting diameter -> radius)
+                                double initGripRad =  exploder.InitialGripDistance         * ImageScaleFactor * 400 * 0.5;
+                                double explodeRad  = (exploder.InitialGripDistance + 0.32) * ImageScaleFactor * 400 * 0.5; //  ~0.3 (+)
+                                double collapseRad = (exploder.InitialGripDistance - 0.29) * ImageScaleFactor * 400 * 0.5; // ~-0.3 (-)
+
+                                dc.DrawEllipse(null, gripInitPen,   center, initGripRad, initGripRad);
+                                dc.DrawEllipse(null, gripThreshPen, center, explodeRad,  explodeRad);
+                                dc.DrawEllipse(null, gripThreshPen, center, collapseRad, collapseRad);
+                            }
+
+                            // Loop the radius animation
+                            handCircleRadius += 1.5;
+                            if (handCircleRadius >= MaxHandCircleRadius) handCircleRadius = MinHandCircleRadius;
                         }
-
-                        // Loop the radius animation
-                        this.handCircleRadius += 1.5;
-                        if (this.handCircleRadius >= MaxHandCircleRadius) this.handCircleRadius = MinHandCircleRadius;
                     }
                 }
-            }
+            });
+        }
+
+        public void FadeIn() {
+            this.Visibility = Visibility.Visible;
+
+            this.BeginAnimation(System.Windows.Window.OpacityProperty, new DoubleAnimation {
+                From = this.Opacity,
+                To   = 1.0,
+                Duration = new Duration(TimeSpan.FromSeconds(0.5))
+            }, HandoffBehavior.SnapshotAndReplace);
+        }
+
+        public void FadeOut() {
+            DoubleAnimation anim = new DoubleAnimation {
+                From = this.Opacity,
+                To   = 0.0,
+                Duration = new Duration(TimeSpan.FromSeconds(0.5))
+            };
+            anim.Completed += (object sender, EventArgs e) => {
+                this.Visibility = Visibility.Hidden;
+            };
+
+            this.BeginAnimation(System.Windows.Window.OpacityProperty, anim, HandoffBehavior.SnapshotAndReplace);
         }
 
         #region Skeleton Drawing (modified from SkeletonBasics-WPF sample)
@@ -129,22 +152,22 @@ namespace Rotate3D {
         /// <param name="drawingContext">drawing context to draw to</param>
         private void DrawBonesAndJoints(Skeleton skeleton, DrawingContext drawingContext) {
             // Render Torso
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.ShoulderLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.ShoulderRight);
+            DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.ShoulderLeft);
+            DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.ShoulderRight);
 
             // Left Arm
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderLeft, JointType.ElbowLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.ElbowLeft, JointType.WristLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.WristLeft, JointType.HandLeft);
+            DrawBone(skeleton, drawingContext, JointType.ShoulderLeft, JointType.ElbowLeft);
+            DrawBone(skeleton, drawingContext, JointType.ElbowLeft, JointType.WristLeft);
+            DrawBone(skeleton, drawingContext, JointType.WristLeft, JointType.HandLeft);
 
             // Right Arm
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderRight, JointType.ElbowRight);
-            this.DrawBone(skeleton, drawingContext, JointType.ElbowRight, JointType.WristRight);
-            this.DrawBone(skeleton, drawingContext, JointType.WristRight, JointType.HandRight);
+            DrawBone(skeleton, drawingContext, JointType.ShoulderRight, JointType.ElbowRight);
+            DrawBone(skeleton, drawingContext, JointType.ElbowRight, JointType.WristRight);
+            DrawBone(skeleton, drawingContext, JointType.WristRight, JointType.HandRight);
 
             // Render tbe selected joints
             foreach (JointType joint in DrawJoints)
-                drawingContext.DrawEllipse(this.jointBrush, null, this.SkeletonPointToScreen(skeleton.Joints[joint].Position), JointThickness, JointThickness);
+                drawingContext.DrawEllipse(jointBrush, null, SkeletonPointToScreen(skeleton.Joints[joint].Position), JointThickness, JointThickness);
         }
 
         /// <summary>
@@ -155,7 +178,7 @@ namespace Rotate3D {
         private Point SkeletonPointToScreen(SkeletonPoint skelpoint) {
             // Convert point to depth space.  
             // We are not using depth directly, but we do want the points in our 640x480 output resolution.
-            DepthImagePoint depthPoint = this.sensor.CoordinateMapper.MapSkeletonPointToDepthPoint(skelpoint, DepthImageFormat.Resolution640x480Fps30);
+            DepthImagePoint depthPoint = kinect.Sensor.CoordinateMapper.MapSkeletonPointToDepthPoint(skelpoint, DepthImageFormat.Resolution640x480Fps30);
             return new Point(depthPoint.X * ImageScaleFactor, depthPoint.Y * ImageScaleFactor);
         }
 
@@ -171,18 +194,16 @@ namespace Rotate3D {
             Joint joint1 = skeleton.Joints[jointType1];
 
             // If we can't find either of these joints, exit
-            if (joint0.TrackingState == JointTrackingState.NotTracked ||
-                joint1.TrackingState == JointTrackingState.NotTracked) {
+            if (joint0.TrackingState == JointTrackingState.NotTracked || joint1.TrackingState == JointTrackingState.NotTracked) {
                 return;
             }
 
             // Don't draw if both points are inferred
-            if (joint0.TrackingState == JointTrackingState.Inferred &&
-                joint1.TrackingState == JointTrackingState.Inferred) {
+            if (joint0.TrackingState == JointTrackingState.Inferred && joint1.TrackingState == JointTrackingState.Inferred) {
                 return;
             }
 
-            drawingContext.DrawLine(this.bonePen, this.SkeletonPointToScreen(joint0.Position), this.SkeletonPointToScreen(joint1.Position));
+            drawingContext.DrawLine(bonePen, SkeletonPointToScreen(joint0.Position), SkeletonPointToScreen(joint1.Position));
         }
 
         #endregion

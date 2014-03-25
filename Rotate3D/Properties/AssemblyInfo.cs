@@ -8,11 +8,11 @@ using System.Windows;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("Kinect Rotate 3D")]
-[assembly: AssemblyDescription("Kinect Rotate 3D Pit Demo")]
+[assembly: AssemblyDescription("Team 2485 Kinect Pit Demo")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Team 2485")]
+[assembly: AssemblyCompany("Bryce Matsumori")]
 [assembly: AssemblyProduct("KinectRotate3D")]
-[assembly: AssemblyCopyright("Copyright © 2013 Bryce Matsumori")]
+[assembly: AssemblyCopyright("Copyright © 2014 Bryce Matsumori")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -51,6 +51,6 @@ using System.Windows;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
 [assembly: NeutralResourcesLanguageAttribute("en-US")]

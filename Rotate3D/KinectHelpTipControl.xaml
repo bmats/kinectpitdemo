@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
-             d:DesignHeight="204" d:DesignWidth="354" Background="#FF511C74" BorderBrush="White" BorderThickness="2">
+             d:DesignHeight="204" d:DesignWidth="354" Background="#FF111111" BorderBrush="#E4C025" BorderThickness="2">
     <Grid>
         <Label Content="Hi there!" FontSize="24" Foreground="White" Margin="10,30,120,0" VerticalAlignment="Top" HorizontalContentAlignment="Right" />
         <TextBlock Text="If you need help, move your left arm straight out at a 45° angle from your body."
