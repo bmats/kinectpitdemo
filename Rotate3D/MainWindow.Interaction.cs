@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Configuration;
+using System.Linq;
+using System.Timers;
+using System.Windows;
 using Microsoft.Kinect;
 using Microsoft.Kinect.Toolkit.Interaction;
 using Warlords.Kinect;
@@ -13,10 +16,8 @@ namespace Rotate3D {
         private SolidWorks sw;
 
         // Player data
-        //private Skeleton[] foundSkeletons;
         private Skeleton activeSkel;
-        private InteractionHandType activeGrippingHand;//, activeWavingHand;
-        //private WaveState activeWaveState = WaveState.None;
+        private InteractionHandType activeGrippingHand;
 
         // Additional modes
         private Exploder exploder;
@@ -41,312 +42,266 @@ namespace Rotate3D {
             if (float.TryParse(ConfigurationManager.AppSettings["Inertia"],            out temp)) Inertia            = temp;
         }
 
-        //private void ProcessSkeletons() {
-        //    {
-        //        if (this.foundSkeletons == null) return;
+        #region Kinect Handlers
 
-        //        // Find the first skeleton which is tracked, the primary skeleton, as selected by the SDK
-        //        Skeleton bestSkel = null;
-        //        foreach (Skeleton skel in this.foundSkeletons) {
-        //            if (skel == null) continue;
+        private void kinect_ColorFrameReady(object sender, ColorFrameReadyEventArgs e) {
+            Dispatcher.Invoke(() => {
+                colorBitmap.WritePixels(new Int32Rect(0, 0, colorBitmap.PixelWidth, colorBitmap.PixelHeight),
+                    e.Pixels,
+                    colorBitmap.PixelWidth * sizeof(int), 0);
+            });
+        }
 
-        //            // Tracked within focus area
-        //            if (skel.TrackingState == SkeletonTrackingState.Tracked &&
-        //                skel.Position.Z < 2 && Math.Abs(skel.Position.X) < 0.35) {
-        //                bestSkel = skel;
-        //                break;
-        //            }
-        //        }
-        //        Skeleton prevSkeleton = this.activeSkel;
-        //        this.activeSkel   = bestSkel;
+        private void kinect_DepthFrameReady(object sender, DepthFrameReadyEventArgs e) {
+            // Fill mask with opaque
+            for (int i = 0; i < greenScreenPixelData.Length; i++) greenScreenPixelData[i] = -1;
 
-        //        if ((prevSkeleton == null && this.activeSkel != null) ||
-        //            (prevSkeleton != null && this.activeSkel != null && prevSkeleton.TrackingId != this.activeSkel.TrackingId)) {
-        //            // New skeleton found
-                    
-        //            // Reset
-        //            this.viewRotationX = 0;
-        //            this.viewRotationY = 0;
-        //            this.activeWaveState = WaveState.None;
-        //        }
-        //        else if (prevSkeleton != null && this.activeSkel == null) {
-        //            // Skeleton lost
+            // Loop through each pixel
+            int index;
+            for (int y = 0; y < 480; y++) {
+                for (int x = 0; x < 640; x++) {
+                    index = x + y * 640;
+                    DepthImagePixel pixel = e.DepthPixels[index];
 
-        //            this.activeGrippingHand = InteractionHandType.None;
-        //            this.helpWindowVisible  = false;
-        //            this.isCoasting         = true;
+                    // Check if there is a player here
+                    if (pixel.PlayerIndex > 0) {
+                        ColorImagePoint colorImagePoint = e.ColorPoints[index];
 
-        //            this.Dispatcher.Invoke(() => {
-        //                this.helpTipWindow.FadeOut();
-        //                this.helpWindow.FadeOut();
+                        int colorInDepthX = colorImagePoint.X,
+                            colorInDepthY = colorImagePoint.Y;
 
-        //                this.FadeOut();
-        //                this.banner.SlideDown();
-        //                this.hand.FadeOut();
-        //            });
-        //        }
-        //    }
+                        // Unmask the player
+                        if (colorInDepthX > 0 && colorInDepthX < 640 && colorInDepthY >= 0 && colorInDepthY < 480) {
+                            int greenScreenIndex = colorInDepthX + (colorInDepthY * 640);
+                            greenScreenPixelData[greenScreenIndex] = 0; // non-opaque value
+                        }
+                    }
+                }
+            }
 
-        //    // Run explode animation if necessary (regardless of whether we have a skeleton)
-        //    if (this.sw.Animating) this.sw.AnimateStep();
+            // Save the processed mask to the image
+            Dispatcher.Invoke(() => {
+                playerMaskImage.WritePixels(new Int32Rect(0, 0, 640, 480), greenScreenPixelData,
+                    640 * ((playerMaskImage.Format.BitsPerPixel + 7) / 8), 0);
+            });
+        }
 
-        //    if (activeSkel != null) {
-        //        WaveState prevWaveState = activeWaveState;
+        private void waver_WaveStarted(object sender, WaveEventArgs e) {
+            Dispatcher.Invoke(() => {
+                FadeIn();
+                hand.Direction = Hand.Side.Right;
+                hand.FadeIn();
+            });
+        }
 
-        //        // Look for hand waving
-        //        if (activeWaveState != WaveState.Active) {
-        //            if (activeSkel.Joints[JointType.WristRight].Position.Y -
-        //                activeSkel.Joints[JointType.ElbowRight].Position.Y > 0.05) {
-        //                activeWavingHand = InteractionHandType.Right;
+        private void waver_WaveLost(object sender, WaveEventArgs e) {
+            Dispatcher.Invoke(() => {
+                FadeOut();
+                hand.FadeOut();
+            });
+        }
 
-        //                switch (activeWaveState) {
-        //                    case WaveState.None:
-        //                    case WaveState.R1:
-        //                    case WaveState.R2:
-        //                        if (activeSkel.Joints[JointType.WristRight].Position.X -
-        //                            activeSkel.Joints[JointType.ElbowRight].Position.X > 0.04) activeWaveState++;
-        //                        this.hand.Dispatcher.Invoke(() => {
-        //                            this.hand.Direction = Hand.Side.Right;
-        //                        });
-        //                        break;
-        //                    case WaveState.L1:
-        //                    case WaveState.L2:
-        //                        if (activeSkel.Joints[JointType.WristRight].Position.X -
-        //                            activeSkel.Joints[JointType.ElbowRight].Position.X < -0.03) activeWaveState++;
-        //                        this.hand.Dispatcher.Invoke(() => {
-        //                            this.hand.Direction = Hand.Side.Left;
-        //                        });
-        //                        break;
-        //                }
-        //            }
-        //            else if (activeSkel.Joints[JointType.WristLeft].Position.Y -
-        //                activeSkel.Joints[JointType.ElbowLeft].Position.Y > 0.05) {
-        //                activeWavingHand = InteractionHandType.Left;
+        private void waver_WaveCompleted(object sender, WaveEventArgs e) {
+            Dispatcher.Invoke(() => {
+                helpTipWindow.FadeIn();
+                helpTipWindow.FadeOutAfter(6, false, true);
 
-        //                switch (activeWaveState) {
-        //                    case WaveState.None:
-        //                    case WaveState.R1:
-        //                    case WaveState.R2:
-        //                        if (activeSkel.Joints[JointType.WristLeft].Position.X -
-        //                            activeSkel.Joints[JointType.ElbowLeft].Position.X > 0.04) activeWaveState++;
-        //                        this.hand.Dispatcher.Invoke(() => {
-        //                            this.hand.Direction = Hand.Side.Right;
-        //                        });
-        //                        break;
-        //                    case WaveState.L1:
-        //                    case WaveState.L2:
-        //                        if (activeSkel.Joints[JointType.WristLeft].Position.X -
-        //                            activeSkel.Joints[JointType.ElbowLeft].Position.X < -0.03) activeWaveState++;
-        //                        this.hand.Dispatcher.Invoke(() => {
-        //                            this.hand.Direction = Hand.Side.Left;
-        //                        });
-        //                        break;
-        //                }
-        //            }
-        //            else {
-        //                activeWavingHand = InteractionHandType.None;
-        //                activeWaveState  = WaveState.None;
-        //                this.Dispatcher.Invoke(() => {
-        //                    this.FadeOut();
-        //                    this.hand.FadeOut();
-        //                });
-        //            }
+                banner.SlideUp();
+                hand.Direction = Hand.Side.Right;
+                hand.FadeOut();
+            });
+        }
 
-        //            if (prevWaveState == WaveState.None && activeWaveState != WaveState.None) {
-        //                this.Dispatcher.Invoke(() => {
-        //                    this.FadeIn();
-        //                    this.hand.Direction = Hand.Side.Right;
-        //                    this.hand.FadeIn();
-        //                });
-        //            }
-        //        }
+        private void waver_StateChanged(object sender, WaveEventArgs e) {
+            switch (e.State) {
+                case WaveState.None:
+                case WaveState.FirstRight:
+                case WaveState.SecondRight:
+                case WaveState.Active:
+                    this.hand.Dispatcher.Invoke(() => {
+                        this.hand.Direction = Hand.Side.Right;
+                    });
+                    break;
+                case WaveState.FirstLeft:
+                case WaveState.SecondLeft:
+                    this.hand.Dispatcher.Invoke(() => {
+                        this.hand.Direction = Hand.Side.Left;
+                    });
+                    break;
+            }
+        }
 
-        //        if (this.activeWaveState == WaveState.Active) {
-        //            if (prevWaveState != WaveState.Active) {
-        //                // Newly active
+        private void kinect_SkeletonReady(object sender, SkeletonReadyEventArgs e) {
+            Skeleton prevSkel = activeSkel;
+            activeSkel = e.PrimarySkeleton;
 
-        //                this.Dispatcher.Invoke(() => {
-        //                    this.helpTipWindow.FadeIn();
-        //                    this.helpTipWindow.FadeOutAfter(6, false, true);
+            if ((prevSkel == null && activeSkel != null) ||
+                (prevSkel != null && activeSkel != null && prevSkel.TrackingId != activeSkel.TrackingId)) {
+                // New skeleton found
 
-        //                    this.banner.SlideUp();
-        //                    this.hand.Direction = Hand.Side.Right;
-        //                    this.hand.FadeOut();
-        //                });
-        //            }
+                // Reset
+                viewRotationX = 0;
+                viewRotationY = 0;
+            }
+            else if (prevSkel != null && activeSkel == null) {
+                // Skeleton lost
 
-        //            // Show or hide help window
-        //            bool inGuidePosition = this.activeSkel.IsInGuidePosition();
-        //            if (this.activeGrippingHand == InteractionHandType.None && inGuidePosition && !this.helpWindowVisible) {
-        //                if (this.guidePositionStartTime == 0) // first time in guide position
-        //                    this.guidePositionStartTime = DateTime.Now.Ticks;
-        //                else if (DateTime.Now.Ticks - this.guidePositionStartTime > 10000000L) { // 1 second has passed
-        //                    // Display help after being held in the help position
-        //                    this.helpWindow.Dispatcher.Invoke(() => {
-        //                        this.helpWindow.FadeIn();
-        //                    });
+                activeGrippingHand = InteractionHandType.None;
+                helpWindowVisible  = false;
+                isCoasting         = true;
 
-        //                    this.helpWindowVisible = true;
-        //                }
-        //            }
-        //            else if ((this.activeGrippingHand != InteractionHandType.None || !inGuidePosition) && this.helpWindowVisible) {
-        //                // Hide help when leaving guide position
-        //                this.helpWindow.Dispatcher.Invoke(() => {
-        //                    this.helpWindow.FadeOut();
-        //                });
+                Dispatcher.Invoke(() => {
+                    helpTipWindow.FadeOut();
+                    helpWindow.FadeOut();
 
-        //                this.helpWindowVisible      = false;
-        //                this.guidePositionStartTime = 0;
-        //            }
+                    FadeOut();
+                    banner.SlideDown();
+                    hand.FadeOut();
+                });
+            }
 
-        //            // Process skeleton for exploding
-        //            this.exploder.ProcessSkeleton(this.activeSkel, this.activeGrippingHand != InteractionHandType.None && this.secondaryGripping);
+            if (activeSkel != null && waver.State == WaveState.Active) {
+                #region Show or hide help window
 
-        //            // Primary gripping and moving
-        //            if (!this.secondaryGripping && this.activeGrippingHand != InteractionHandType.None) {
-        //                // Calculate the new arm position
-        //                double newX = GetArmHorizontalPosition(this.activeGrippingHand, this.activeSkel),
-        //                       newY = GetArmVerticalPosition  (this.activeGrippingHand, this.activeSkel),
-        //                       newZ = GetArmZoomAmount        (this.activeGrippingHand, this.activeSkel);
+                bool inGuidePosition = activeSkel.IsInGuidePosition();
+                if (activeGrippingHand == InteractionHandType.None && inGuidePosition && !helpWindowVisible) {
+                    // If first time in guide position
+                    if (guidePositionStartTime == 0) {
+                        guidePositionStartTime = DateTime.Now.Ticks;
+                    }
+                    else if (DateTime.Now.Ticks - guidePositionStartTime > 10000000L) { // 1 second has passed
+                        // Display help after being held in the help position
+                        helpWindow.Dispatcher.Invoke(() => {
+                            helpWindow.FadeIn();
+                        });
 
-        //                // Update the history with the current position
-        //                this.positionHistory[this.positionHistoryIdx].X = newX;
-        //                this.positionHistory[this.positionHistoryIdx].Y = newY;
-        //                this.positionHistory[this.positionHistoryIdx].Z = newZ;
+                        helpWindowVisible = true;
+                    }
+                }
+                else if ((activeGrippingHand != InteractionHandType.None || !inGuidePosition) && helpWindowVisible) {
+                    // Hide help when leaving guide position
+                    helpWindow.Dispatcher.Invoke(() => {
+                        helpWindow.FadeOut();
+                    });
 
-        //                // Average the history to remove jitter and provide easing
-        //                double avgX = this.positionHistory.Select(p => p.X).Sum() / this.positionHistory.Length,
-        //                       avgY = this.positionHistory.Select(p => p.Y).Sum() / this.positionHistory.Length,
-        //                       avgZ = this.positionHistory.Select(p => p.Z).Sum() / this.positionHistory.Length;
+                    helpWindowVisible      = false;
+                    guidePositionStartTime = 0;
+                }
 
-        //                double xDiff = avgX - this.prevPosition.X,
-        //                       yDiff = avgY - this.prevPosition.Y,
-        //                       zDiff = avgZ - this.prevPosition.Z;
+                #endregion
 
-        //                // Convert the position to actual pixels
-        //                double angleX = xDiff * RotationConversion,
-        //                       angleY = yDiff * RotationConversion,
-        //                      factorZ = zDiff * ZoomConversion;
+                // Process skeleton for exploding
+                exploder.ProcessSkeleton(activeSkel, activeGrippingHand != InteractionHandType.None && secondaryGripping);
 
-        //                // Update the current position and previous position
-        //                this.viewRotationX += angleX;
-        //                this.viewRotationY += angleY;
-        //                this.zoom          += factorZ;
+                // Primary gripping and moving
+                if (!secondaryGripping && activeGrippingHand != InteractionHandType.None) {
+                    // Calculate the new arm position
+                    float newX = activeSkel.GetArmRelativeX((HandType) activeGrippingHand),
+                          newY = activeSkel.GetArmRelativeY((HandType) activeGrippingHand),
+                          newZ = activeSkel.GetArmRelativeZ((HandType) activeGrippingHand);
 
-        //                this.viewRotationXVel = xDiff;
-        //                this.viewRotationYVel = yDiff;
-        //                this.zoomVel          = zDiff;
+                    // Update the history with the current position
+                    positionHistory[positionHistoryIdx].X = newX;
+                    positionHistory[positionHistoryIdx].Y = newY;
+                    positionHistory[positionHistoryIdx].Z = newZ;
 
-        //                this.prevPosition.X = avgX;
-        //                this.prevPosition.Y = avgY;
-        //                this.prevPosition.Z = avgZ;
+                    // Average the history to remove jitter and provide easing
+                    float avgX = positionHistory.Select(p => p.X).Sum() / positionHistory.Length,
+                          avgY = positionHistory.Select(p => p.Y).Sum() / positionHistory.Length,
+                          avgZ = positionHistory.Select(p => p.Z).Sum() / positionHistory.Length;
 
-        //                // Update the circular history buffer index
-        //                this.positionHistoryIdx = (this.positionHistoryIdx + 1) % this.positionHistory.Length;
+                    float xDiff = avgX - prevPosition.X,
+                          yDiff = avgY - prevPosition.Y,
+                          zDiff = avgZ - prevPosition.Z;
 
-        //                // Move the model accordingly
-        //                this.sw.AdjustViewAngle(angleX, angleY);
-        //                this.sw.AdjustZoom(factorZ);
-        //                return;
-        //            }
-        //        }
-        //    }
+                    // Convert the position to actual pixels
+                    float angleX = xDiff * RotationConversion,
+                          angleY = yDiff * RotationConversion,
+                         factorZ = zDiff * ZoomConversion;
 
-        //    if (this.isCoasting) {
-        //        this.viewRotationXVel *= Inertia;
-        //        this.viewRotationYVel *= Inertia;
-        //        this.zoomVel *= Inertia;
+                    // Update the current position and previous position
+                    viewRotationX += angleX;
+                    viewRotationY += angleY;
+                    zoom          += factorZ;
 
-        //        double xDiff = viewRotationXVel,
-        //               yDiff = viewRotationYVel,
-        //               zDiff = zoomVel;
+                    viewRotationXVel = xDiff;
+                    viewRotationYVel = yDiff;
+                    zoomVel          = zDiff;
 
-        //        // If stopped moving (passed min threshold), stop coasting
-        //        if (Math.Abs(this.viewRotationXVel) < 0.001 && Math.Abs(this.viewRotationYVel) < 0.001 && Math.Abs(this.zoomVel) < 0.001) {
-        //            this.isCoasting = false;
-        //            this.sw.PostRender();
-        //        }
+                    prevPosition.X = avgX;
+                    prevPosition.Y = avgY;
+                    prevPosition.Z = avgZ;
 
-        //        // Convert the position to actual pixels
-        //        double angleX = xDiff * RotationConversion,
-        //               angleY = yDiff * RotationConversion,
-        //              factorZ = zDiff * ZoomConversion;
+                    // Update the circular history buffer index
+                    positionHistoryIdx = (positionHistoryIdx + 1) % positionHistory.Length;
 
-        //        // Update the current position and previous position
-        //        this.viewRotationX += angleX;
-        //        this.viewRotationY += angleY;
-        //        this.zoom          += factorZ;
+                    // Move the model accordingly in timer thread
+                    nextAngleX  = angleX;
+                    nextAngleY  = angleY;
+                    nextFactorZ = factorZ;
+                    swNext = true;
+                }
+            }
+        }
 
-        //        this.prevPosition.X += xDiff;
-        //        this.prevPosition.Y += yDiff;
-        //        this.prevPosition.Z += zDiff;
+        private void kinect_UserInfoReady(object sender, UserInfoReadyEventArgs e) {
+            if (activeSkel == null) return;
 
-        //        // Move the model accordingly
-        //        this.sw.AdjustViewAngle(angleX, angleY);
-        //        this.sw.AdjustZoom(factorZ);
-        //    }
-        //}
+            // Find the hand pointers which are from the main skeleton
+            UserInfo ui = e.UserInfo.FirstOrDefault(u => u.SkeletonTrackingId == activeSkel.TrackingId);
+            if (ui == null) return;
 
-        /// <summary>
-        /// Process gripping
-        /// </summary>
-        /// <param name="info"></param>
-        //private void ProcessUserInfo(UserInfo[] info) {
-        //    if (this.activeSkel == null) return;
+            foreach (InteractionHandPointer hp in ui.HandPointers.Where(hp => hp.IsTracked)) {
+                switch (hp.HandEventType) {
+                    case InteractionHandEventType.Grip:
+                        // If not gripping, start gripping
+                        if (activeGrippingHand == InteractionHandType.None) {
+                            activeGrippingHand = hp.HandType;
 
-        //    // Find the hand pointers which are from the main skeleton
-        //    UserInfo ui = info.FirstOrDefault(u => u.SkeletonTrackingId == activeSkel.TrackingId);
-        //    if (ui == null) return;
-            
-        //    foreach (InteractionHandPointer hp in ui.HandPointers.Where(hp => hp.IsTracked)) {
-        //        switch (hp.HandEventType) {
-        //            case InteractionHandEventType.Grip:
-        //                // If not gripping, start gripping
-        //                if (this.activeGrippingHand == InteractionHandType.None) {
-        //                    this.activeGrippingHand = hp.HandType;
+                            // Save our new position
+                            RefreshGripHandPosition();
 
-        //                    // Save our new position
-        //                    this.RefreshGripHandPosition();
+                            isCoasting = false;
+                            sw.PreRender();
+                        }
+                        // If already gripping, secondary grip
+                        else secondaryGripping = true;
+                        break;
+                    case InteractionHandEventType.GripRelease:
+                        // Only release the active grip
+                        if (hp.HandType == this.activeGrippingHand) {
+                            // Transfer grip control to secondary hand if possible
+                            if (secondaryGripping) {
+                                activeGrippingHand = activeGrippingHand == InteractionHandType.Left ? InteractionHandType.Right : InteractionHandType.Left;
+                                secondaryGripping = false;
 
-        //                    this.isCoasting = false;
-        //                    this.sw.PreRender();
-        //                }
-        //                // If already gripping, secondary grip
-        //                else this.secondaryGripping = true;
-        //                break;
-        //            case InteractionHandEventType.GripRelease:
-        //                // Only release the active grip
-        //                if (hp.HandType == this.activeGrippingHand) {
-        //                    // Transfer grip control to secondary hand if possible
-        //                    if (this.secondaryGripping) {
-        //                        this.activeGrippingHand = this.activeGrippingHand == InteractionHandType.Left ? InteractionHandType.Right : InteractionHandType.Left;
-        //                        this.secondaryGripping  = false;
+                                // Prevent jumping
+                                RefreshGripHandPosition();
+                            }
+                            else {
+                                // No secondary gripping, so stop control and activate coasting
+                                activeGrippingHand = InteractionHandType.None;
+                                isCoasting = true;
 
-        //                        // Prevent jumping
-        //                        this.RefreshGripHandPosition();
-        //                    }
-        //                    else {
-        //                        // No secondary gripping, so stop control and activate coasting
-        //                        this.activeGrippingHand = InteractionHandType.None;
-        //                        this.isCoasting         = true;
+                                Dispatcher.Invoke(() => {
+                                    helpTipWindow.FadeOut(false, true);
+                                    helpWindow.FadeOut(false, true);
+                                    helpWindowVisible = false;
+                                });
+                            }
+                        }
+                        else {
+                            secondaryGripping = false;
 
-        //                        this.Dispatcher.Invoke(() => {
-        //                            this.helpTipWindow.FadeOut(false, true);
-        //                            this.helpWindow.FadeOut(false, true);
-        //                            this.helpWindowVisible = false;
-        //                        });
-        //                    }
-        //                }
-        //                else {
-        //                    this.secondaryGripping = false;
+                            // Prevent jumping
+                            RefreshGripHandPosition();
+                        }
+                        break;
+                }
+            }
+        }
 
-        //                    // Prevent jumping
-        //                    this.RefreshGripHandPosition();
-        //                }
-        //                break;
-        //        }
-        //    }
-        //}
+        #endregion
 
         private void RefreshGripHandPosition() {
             // Save current position
@@ -357,6 +312,51 @@ namespace Rotate3D {
             // Fill position history with current position to clear previous values
             for (int i = 0; i < positionHistory.Length; i++)
                 positionHistory[i] = prevPosition;
+        }
+
+        private void UpdateSolidWorks(object sender, ElapsedEventArgs e) {
+            // Run explode animation if necessary (regardless of whether we have a skeleton)
+            if (sw.Animating) sw.AnimateStep();
+
+            if (swNext) {
+                sw.AdjustViewAngle(nextAngleX, nextAngleY);
+                sw.AdjustZoom(nextFactorZ);
+                swNext = false;
+            }
+
+            if (isCoasting) {
+                viewRotationXVel *= Inertia;
+                viewRotationYVel *= Inertia;
+                zoomVel          *= Inertia;
+
+                float xDiff = viewRotationXVel,
+                      yDiff = viewRotationYVel,
+                      zDiff = zoomVel;
+
+                // If stopped moving (passed min threshold), stop coasting
+                if (Math.Abs(viewRotationXVel) < 0.001f && Math.Abs(viewRotationYVel) < 0.001f && Math.Abs(zoomVel) < 0.001f) {
+                    isCoasting = false;
+                    sw.PostRender();
+                }
+
+                // Convert the position to actual pixels
+                float angleX = xDiff * RotationConversion,
+                      angleY = yDiff * RotationConversion,
+                     factorZ = zDiff * ZoomConversion;
+
+                // Update the current position and previous position
+                viewRotationX += angleX;
+                viewRotationY += angleY;
+                zoom          += factorZ;
+
+                prevPosition.X += xDiff;
+                prevPosition.Y += yDiff;
+                prevPosition.Z += zDiff;
+
+                // Move the model accordingly
+                sw.AdjustViewAngle(angleX, angleY);
+                sw.AdjustZoom(factorZ);
+            }
         }
     }
 }

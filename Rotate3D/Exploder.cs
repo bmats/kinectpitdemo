@@ -81,12 +81,7 @@ namespace Rotate3D {
                 isGripping = true;
             }
             else if (bothGripping) {
-                float
-                    prevHandDist2 =
-                        (prevRightPoint.X - prevLeftPoint.X) * (prevRightPoint.X - prevLeftPoint.X) +
-                        (prevRightPoint.Y - prevLeftPoint.Y) * (prevRightPoint.Y - prevLeftPoint.Y) +
-                        (prevRightPoint.Z - prevLeftPoint.Z) * (prevRightPoint.Z - prevLeftPoint.Z),
-                    handDistDiff = (float)Math.Sqrt(handDist2) - initGripDist; // distance difference since initial grip
+                float handDistDiff = (float)Math.Sqrt(handDist2) - initGripDist; // distance difference since initial grip
 
                 // Play an animation if passed the thresholds (it's OK if Play() methods are called multiple times)
                 if (handDistDiff > ExplodeDiffThreshold) {

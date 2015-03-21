@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   id="GuideDiagram"
+   version="1.1"
+   width="100%"
+   height="100%">
+  <title
+     id="title3014">Kinect Guide Gesture Diagram</title>
+  <metadata
+     id="metadata15">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title>Kinect Guide Gesture Diagram</dc:title>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>Bryce</dc:title>
+          </cc:Agent>
+        </dc:creator>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <sodipodi:namedview
+     pagecolor="#521c74"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="1"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1440"
+     inkscape:window-height="848"
+     id="namedview11"
+     showgrid="false"
+     inkscape:zoom="0.38488448"
+     inkscape:cx="-95.337148"
+     inkscape:cy="306.5855"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg2" />
+  <g
+     id="original"
+     sodipodi:docbase="/datas/Projs/Cliparts Stocker/tmp/AIGA"
+     sodipodi:version="0.32"
+     inkscape:version="0.41"
+     sodipodi:docname="AIGA_Toilet_Men_2.svg"
+     display="none">
+  	<path
+     id="body"
+     display="inline"
+     d="M257.105,140.273c-28.918,0-52.173,23.584-52.173,53v125.375c0,24.375,35.673,24.375,35.673,0   V204.006h8.444v313.908c0,32.588,47.503,31.629,47.503,0V335.693h8.182v182.221c0,31.629,47.765,32.588,47.765,0V204.006h8.247   v114.642c0,24.563,35.487,24.563,35.422,0V194.023c0-27.125-21.064-53.694-52.814-53.694L257.105,140.273z" />
+  	<path
+     id="head"
+     display="inline"
+     d="M300.803,131.26c22.55,0,40.835-18.284,40.835-40.836c0-22.551-18.284-40.834-40.835-40.834   c-22.552,0-40.835,18.283-40.835,40.834C259.969,112.976,278.251,131.26,300.803,131.26z" />
+  </g>
+  <path
+     inkscape:connector-curvature="0"
+     d="m 257.358,140.273 c -28.918,0 -37.252,20.009 -52.173,53 L 144.97,286.3 c -17.236,17.235 7.989,42.46 25.225,25.225 l 70.663,-107.519 h 8.444 v 313.908 c 0,32.588 47.503,31.629 47.503,0 V 335.693 h 8.183 v 182.221 c 0,31.629 47.765,32.588 47.765,0 V 204.006 H 361 v 114.642 c 0,24.563 35.487,24.563 35.422,0 V 194.023 c 0,-27.125 -21.065,-53.694 -52.815,-53.694 l -86.249,-0.056 z"
+     id="body_1_"
+     style="stroke:none;fill:#ffffff;fill-opacity:1" /><path
+     inkscape:connector-curvature="0"
+     d="m 301.056,131.26 c 22.551,0 40.835,-18.284 40.835,-40.836 0,-22.551 -18.284,-40.834 -40.835,-40.834 -22.552,0 -40.834,18.283 -40.834,40.834 0,22.552 18.282,40.836 40.834,40.836 z"
+     id="head_1_"
+     style="stroke:none;fill:#ffffff;fill-opacity:1" /><path
+     style="fill:none;stroke:#ffffff;stroke-width:3;stroke-linecap:round;stroke-opacity:1"
+     inkscape:connector-curvature="0"
+     d="m 182.032,310.782 c 17.438,11.255 37.543,18.724 59.154,21.279"
+     id="angle" />
+</svg>

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Timers;
 using System.Windows;
 using System.Windows.Media;
@@ -20,9 +19,6 @@ namespace Rotate3D {
 
         // Color and depth image data storage
         private WriteableBitmap colorBitmap;
-        //private ColorImagePoint[] colorCoordinates;
-        //private byte[] colorPixels;
-        //private DepthImagePixel[] depthPixels;
         private int[] greenScreenPixelData;
         private WriteableBitmap playerMaskImage;
 
@@ -33,9 +29,7 @@ namespace Rotate3D {
         private Pen activeHandPen = new Pen(Brushes.White, 4),
             gripInitPen   = new Pen(new SolidColorBrush(Color.FromArgb(150, 255, 255, 255)), 3),
             gripThreshPen = new Pen(new SolidColorBrush(Color.FromArgb( 50, 255, 255, 255)), 3);
-        private Brush shadowBrush = new SolidColorBrush(Color.FromArgb(150, 0, 0, 0));
-
-        //private Storyboard activeStoryboard, fadeInStoryboard = null, fadeOutStoryboard = null;
+        private Brush shadowBrush = new SolidColorBrush(Color.FromArgb(150,   0,   0,   0));
 
         private void UpdateImage(object sender, ElapsedEventArgs e) {
             if (colorBitmap == null) return;
